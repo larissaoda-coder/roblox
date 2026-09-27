@@ -18,6 +18,7 @@ local ClockService = require(script.Parent.ClockService)
 local LobbyService = require(script.Parent.LobbyService)
 local MapService = require(script.Parent.MapService)
 local PlayerService = require(script.Parent.PlayerService)
+local TeleportLauncher = require(script.Parent.Parent.Match.TeleportLauncher)
 
 export type Match = {
 	Id: string,
@@ -66,6 +67,7 @@ local phase = StateMachine.new("Idle", PHASE_TRANSITIONS)
 local stateFolder: Folder
 local activeMatch: Match? = nil
 local matchCounter = 0
+local role: TeleportLauncher.Role = "Local"
 
 local function setPhase(newPhase: string)
 	local oldPhase = phase.Current
@@ -108,6 +110,16 @@ local function cleanup(match: Match)
 	match.Ended = true
 	if phase.Current ~= "Cleanup" and phase:CanTransition("Cleanup") then
 		setPhase("Cleanup")
+	end
+	if role == "Shift" then
+		-- Servidor do turno: todos voltam para o place do lobby.
+		local present = {}
+		for _, player in match.Players do
+			if player.Parent then
+				table.insert(present, player)
+			end
+		end
+		TeleportLauncher.returnToLobby(present)
 	end
 	for _, player in match.Players do
 		if player.Parent then
@@ -174,29 +186,15 @@ local function runMatch(match: Match)
 	cleanup(match)
 end
 
--- Chamado pelo LobbyService quando o líder aperta INICIAR TURNO.
-local function launch(request): (boolean, string?)
-	if GameConfig.LAUNCH_MODE ~= "Local" then
-		return false, "MatchUnavailable" -- modo Teleport chega na Fase 21
-	end
+-- Cria e roda a partida neste servidor.
+local function startLocalMatch(players: { Player }, mapId: string, partyId: string?): boolean
 	if activeMatch then
-		return false, "ServerBusy"
+		return false
 	end
-
-	local players = {}
-	for _, player in request.Players do
-		if player.Parent and PlayerService:GetState(player) == "Lobby" then
-			table.insert(players, player)
-		end
-	end
-	if #players == 0 then
-		return false, "Unknown"
-	end
-
 	matchCounter += 1
 	local match: Match = {
 		Id = `M{matchCounter}`,
-		MapId = request.MapId,
+		MapId = mapId,
 		Players = players,
 		StartedAt = os.clock(),
 		Aborted = false,
@@ -214,10 +212,83 @@ local function launch(request): (boolean, string?)
 	for _, player in players do
 		PlayerService:SetState(player, "InShift")
 	end
-	LobbyService:DisbandParty(request.PartyId)
+	if partyId then
+		LobbyService:DisbandParty(partyId)
+	end
 
 	task.spawn(runMatch, match)
 	return true
+end
+
+-- Chamado pelo LobbyService quando o líder aperta INICIAR TURNO.
+local function launch(request): (boolean, string?)
+	local players = {}
+	for _, player in request.Players do
+		if player.Parent and PlayerService:GetState(player) == "Lobby" then
+			table.insert(players, player)
+		end
+	end
+	if #players == 0 then
+		return false, "Unknown"
+	end
+
+	if role == "Lobby" then
+		-- Produção: cada equipe vai para o seu próprio servidor.
+		local ok, err = TeleportLauncher.sendParty(request.PartyId, request.MapId, players)
+		if ok then
+			LobbyService:DisbandParty(request.PartyId)
+		end
+		return ok, err
+	end
+	if activeMatch then
+		return false, "ServerBusy"
+	end
+	return startLocalMatch(players, request.MapId, request.PartyId), nil
+end
+
+-- Servidor do turno (modo Teleport): espera a equipe chegar e começa sozinho.
+local function runShiftServer()
+	local expected: { number }? = nil
+	local mapId = "GasStation"
+	local firstArrival: number? = nil
+	local started = false
+
+	local function tryStart(force: boolean)
+		if started or not expected then
+			return
+		end
+		local present = {}
+		for _, player in PlayerService:GetReadyPlayers() do
+			if table.find(expected, player.UserId) then
+				table.insert(present, player)
+			end
+		end
+		if #present == 0 then
+			return
+		end
+		if force or #present >= #expected then
+			started = true
+			startLocalMatch(present, mapId, nil)
+		end
+	end
+
+	PlayerService.PlayerReady:Connect(function(player: Player)
+		local data = TeleportLauncher.readShiftData(player)
+		if data and not expected then
+			expected = data.UserIds
+			mapId = data.MapId
+		end
+		firstArrival = firstArrival or os.clock()
+		tryStart(false)
+	end)
+	task.spawn(function()
+		while not started do
+			task.wait(1)
+			if firstArrival and os.clock() - firstArrival >= GameConfig.TELEPORT_ARRIVAL_TIMEOUT then
+				tryStart(true)
+			end
+		end
+	end)
 end
 
 -- API para outros serviços ---------------------------------------------------------------
@@ -322,8 +393,18 @@ function MatchService:Init()
 	stateFolder = folder
 end
 
+function MatchService:GetRole(): string
+	return role
+end
+
 function MatchService:Start()
-	LobbyService:SetLaunchHandler(launch)
+	role = TeleportLauncher.getRole()
+	log:Info("Papel do servidor: %s", role)
+	if role == "Shift" then
+		runShiftServer()
+	else
+		LobbyService:SetLaunchHandler(launch)
+	end
 	PlayerService.PlayerLeaving:Connect(onPlayerLeaving)
 	PlayerService.PlayerReady:Connect(watchCharacter)
 	for _, player in PlayerService:GetReadyPlayers() do

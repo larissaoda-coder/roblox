@@ -233,6 +233,19 @@ local RemoteSchema: { [string]: RemoteSpec } = {
 		RateLimit = { Max = 1, Per = 5 },
 		Args = {},
 	},
+	GetDebugInfo = {
+		Kind = "Function",
+		Direction = "ClientToServer",
+		RateLimit = { Max = 2, Per = 1 },
+		Args = {},
+	},
+	-- (comando, argumento opcional). Só funciona para admins (validado no servidor).
+	AdminCommand = {
+		Kind = "Function",
+		Direction = "ClientToServer",
+		RateLimit = { Max = 5, Per = 2 },
+		Args = { T.string(32), T.optional(T.oneOfTypes({ "string", "number", "boolean" })) },
+	},
 }
 
 return table.freeze(RemoteSchema)

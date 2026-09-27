@@ -222,6 +222,11 @@ function World.new(kind, name, options)
 
 	self.newInstance = function(className, instanceName)
 		local instance = Mock.newInstance(className, instanceName)
+		if className == "TeleportOptions" then
+			instance.SetTeleportData = function(target, data)
+				target.__teleportData = data
+			end
+		end
 		if options.onCreate then
 			options.onCreate(self, instance)
 		end
@@ -461,6 +466,24 @@ function World.new(kind, name, options)
 		return store
 	end
 
+	game.PlaceId = options.placeId or 0
+	local teleportService = service("TeleportService")
+	self.Teleports = {}
+	teleportService.ReserveServer = function(_, placeId)
+		return `ACCESS-{placeId}`
+	end
+	teleportService.TeleportAsync = function(_, placeId, players, teleportOptions)
+		local names = {}
+		for _, player in players do
+			table.insert(names, player.Name)
+		end
+		table.insert(self.Teleports, {
+			PlaceId = placeId,
+			Players = names,
+			Data = teleportOptions and teleportOptions.__teleportData,
+			AccessCode = teleportOptions and teleportOptions.ReservedServerAccessCode,
+		})
+	end
 	game.PrivateServerId = ""
 	game.PrivateServerOwnerId = 0
 

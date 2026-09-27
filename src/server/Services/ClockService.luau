@@ -21,6 +21,7 @@ ClockService.SpecialTime = Signal.new()
 
 local currentMinute = 0
 local running = false
+local skipRequest = 0
 
 function ClockService:GetMinute(): number
 	return currentMinute
@@ -28,6 +29,15 @@ end
 
 function ClockService:IsRunning(): boolean
 	return running
+end
+
+-- Avança o relógio (admin/testes). Os minutos pulados disparam MinuteChanged normalmente.
+function ClockService:Skip(minutes: number): boolean
+	if not running then
+		return false
+	end
+	skipRequest += minutes
+	return true
 end
 
 -- Roda o relógio do minuto 0 até o fim do turno. Bloqueia (espera) até terminar.
@@ -45,8 +55,11 @@ function ClockService:Run(state: Instance, shouldStop: () -> boolean): boolean
 	while not shouldStop() do
 		-- Espera o minuto em pedaços curtos para reagir rápido se a partida for encerrada.
 		local deadline = os.clock() + MatchConfig.REAL_SECONDS_PER_GAME_MINUTE
-		while os.clock() < deadline and not shouldStop() do
+		while os.clock() < deadline and not shouldStop() and skipRequest <= 0 do
 			task.wait(math.min(0.25, deadline - os.clock()))
+		end
+		if skipRequest > 0 then
+			skipRequest -= 1
 		end
 		if shouldStop() then
 			break
@@ -65,6 +78,7 @@ function ClockService:Run(state: Instance, shouldStop: () -> boolean): boolean
 	end
 
 	running = false
+	skipRequest = 0
 	return completed
 end
 

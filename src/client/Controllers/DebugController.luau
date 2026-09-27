@@ -108,7 +108,7 @@ function DebugController:Start()
 		frames = 0
 		task.wait(REFRESH_SECONDS)
 		local fps = math.floor(frames / (os.clock() - sampleStart) + 0.5)
-		label.Text = Strings.get(
+		local text = Strings.get(
 			"DEBUG_OVERLAY",
 			GameConfig.GAME_VERSION,
 			measurePing(),
@@ -117,6 +117,13 @@ function DebugController:Start()
 			localPlayer:GetAttribute("Level") or 0,
 			localPlayer:GetAttribute("Cash") or 0
 		)
+		-- Estado da partida (só admins recebem isto do servidor).
+		local infoOk, info = Net.Client.invoke("GetDebugInfo")
+		if infoOk and type(info) == "table" then
+			text ..= `\n{info.Phase} · min {info.Minute} · jogadores {info.Alive}/{info.Players} · eventos {info.Events} · tarefas {info.Tasks}`
+			text ..= `\nentidade {info.Entity} ({info.Temperament}) · clima {info.Weather} · tensão {info.Tension} · save {info.Saving}`
+		end
+		label.Text = text
 	end
 end
 

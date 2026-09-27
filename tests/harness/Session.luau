@@ -61,6 +61,7 @@ function Session.new(options)
 		dataStoreUnavailable = options.dataStoreUnavailable,
 		jobId = options.jobId,
 		ownedPasses = options.ownedPasses,
+		placeId = options.placeId,
 		onCreate = function(_, instance)
 			self:_setupServerRemote(instance)
 		end,
@@ -210,6 +211,9 @@ function Session:addClient(name, userId, clientOptions)
 		end
 	end
 	serverPlayer.CharacterAdded = Mock.newSignal()
+	serverPlayer.GetJoinData = function()
+		return { TeleportData = clientOptions.teleportData }
+	end
 	serverPlayer.LoadCount = 0
 	-- Personagem simulado: Model com HumanoidRootPart. LoadCharacter cria um novo (como renascer).
 	serverPlayer.LoadCharacter = function()

@@ -64,6 +64,33 @@ function AudioService:Stop(tag: string, players: { Player }?)
 	Net.Server.fireList("StopSound", players or matchPlayers(), tag)
 end
 
+-- Sons ambientes em loop presos a objetos do mapa (gerador, geladeira).
+local AMBIENT_OBJECTS = { Generator = "GeneratorHum", Fridge = "FridgeHum" }
+
+local function startAmbience(match)
+	local runtime = workspace:FindFirstChild("Runtime")
+	local map = runtime and runtime:FindFirstChild("ActiveMap")
+	if not map then
+		return
+	end
+	for objectName, soundName in AMBIENT_OBJECTS do
+		local object = map:FindFirstChild(objectName, true)
+		if object and object:IsA("BasePart") then
+			Net.Server.fireList(
+				"PlaySound",
+				match.Players,
+				soundName,
+				object.Position,
+				{ Tag = `Ambient_{objectName}` }
+			)
+		end
+	end
+end
+
 function AudioService:Init() end
+
+function AudioService:Start()
+	MatchService.MatchStarted:Connect(startAmbience)
+end
 
 return AudioService

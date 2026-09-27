@@ -306,6 +306,8 @@ local NILLABLE = {
 	Character = true,
 	CameraSubject = true,
 	ProcessReceipt = true,
+	ReservedServerAccessCode = true,
+	__teleportData = true,
 	OnIncomingMessage = true,
 }
 
