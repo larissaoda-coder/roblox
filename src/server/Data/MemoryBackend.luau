@@ -21,7 +21,11 @@ function MemoryBackend:Load(userId: number): (boolean, any)
 	return true, TableUtil.deepCopy(store[userId])
 end
 
-function MemoryBackend:Save(userId: number, data: any): (boolean, string?)
+function MemoryBackend:IsAvailable(): boolean
+	return true
+end
+
+function MemoryBackend:Save(userId: number, data: any, _release: boolean?): (boolean, string?)
 	if LATENCY_SECONDS > 0 then
 		task.wait(LATENCY_SECONDS)
 	end

@@ -180,6 +180,13 @@ local RemoteSchema: { [string]: RemoteSpec } = {
 		Direction = "ServerToClient",
 	},
 
+	-- Resultados ---------------------------------------------------------------
+	-- ({ resumo }) recompensas do turno que acabou.
+	ShiftResults = {
+		Kind = "Event",
+		Direction = "ServerToClient",
+	},
+
 	-- Notificações -----------------------------------------------------------
 	-- (textKey: string, ...args) mensagem curta na tela do jogador.
 	Notify = {

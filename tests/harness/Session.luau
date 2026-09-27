@@ -57,6 +57,9 @@ function Session.new(options)
 	self.Server = World.new("Server", "Server", {
 		verbose = options.verbose,
 		studio = options.studio,
+		dataStores = options.dataStores,
+		dataStoreUnavailable = options.dataStoreUnavailable,
+		jobId = options.jobId,
 		onCreate = function(_, instance)
 			self:_setupServerRemote(instance)
 		end,

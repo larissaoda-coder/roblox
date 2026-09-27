@@ -8,9 +8,10 @@ local TableUtil = require(game:GetService("ReplicatedStorage").Shared.Modules.Ta
 local DataConfig = {
 	SCHEMA_VERSION = 1,
 
-	-- "Memory": dados ficam só enquanto o servidor estiver aberto (Fase 2).
-	-- "DataStore": salvamento real (Fase 13).
-	BACKEND = "Memory" :: "Memory" | "DataStore",
+	-- "Auto": DataStore quando disponível (jogo publicado / Studio com acesso às APIs), senão memória.
+	-- "Memory": dados só enquanto o servidor estiver aberto (testes).
+	-- "DataStore": sempre DataStore (falha se não houver acesso).
+	BACKEND = "Auto" :: "Auto" | "Memory" | "DataStore",
 
 	AUTOSAVE_INTERVAL = 180,
 

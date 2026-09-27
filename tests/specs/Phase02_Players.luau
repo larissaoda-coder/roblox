@@ -12,6 +12,9 @@ local test, expect, expectEqual = Test.test, Test.expect, Test.expectEqual
 local MEMORY_BACKEND = "src/server/Data/MemoryBackend.luau"
 
 local function newSession(context, options)
+	-- Esta fase testa o armazenamento em MEMÓRIA (o DataStore é testado na Fase 13).
+	options = options or {}
+	options.dataStoreUnavailable = true
 	local session = Session.new(options)
 	table.insert(context.sessions, session)
 	Test.expectLog(session.Server, "servidor pronto")

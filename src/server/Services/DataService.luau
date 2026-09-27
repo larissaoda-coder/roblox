@@ -13,6 +13,7 @@ local TableUtil = require(Shared.Modules.TableUtil)
 
 local Server = script.Parent.Parent
 local DataConfig = require(Server.ServerDefinitions.DataConfig)
+local DataStoreBackend = require(Server.Data.DataStoreBackend)
 local MemoryBackend = require(Server.Data.MemoryBackend)
 
 type Data = { [string]: any }
@@ -30,7 +31,16 @@ DataService.ProfileLoaded = Signal.new()
 -- (player, key, newValue, oldValue) sempre que um campo muda.
 DataService.Changed = Signal.new()
 
-local backend = MemoryBackend
+type Backend = {
+	Load: (self: any, userId: number) -> (boolean, any),
+	Save: (self: any, userId: number, data: any, release: boolean?) -> (boolean, string?),
+	IsAvailable: (self: any) -> boolean,
+}
+
+local backend: Backend = MemoryBackend :: any
+local backendName = "Memory"
+local backendReady = false
+local BACKEND_WAIT_TIMEOUT = 20
 local profiles: { [Player]: Profile } = {}
 local loading: { [Player]: boolean } = {}
 
@@ -44,8 +54,8 @@ local function applyAttribute(player: Player, key: string, value: any)
 	end
 end
 
-local function saveProfile(player: Player, profile: Profile): boolean
-	local ok, err = backend:Save(player.UserId, profile.Data)
+local function saveProfile(player: Player, profile: Profile, release: boolean?): boolean
+	local ok, err = backend:Save(player.UserId, profile.Data, release)
 	if not ok then
 		log:Error("Falha ao salvar dados de %s: %s", player.Name, tostring(err))
 	end
@@ -91,6 +101,11 @@ function DataService:LoadProfile(player: Player): boolean
 	end
 
 	loading[player] = true
+	-- Espera o DataService decidir onde salvar (DataStore ou memória) antes de carregar.
+	local waitStarted = os.clock()
+	while not backendReady and os.clock() - waitStarted < BACKEND_WAIT_TIMEOUT do
+		task.wait(0.05)
+	end
 	local ok, stored = backend:Load(player.UserId)
 	loading[player] = nil
 
@@ -129,7 +144,20 @@ function DataService:ReleaseProfile(player: Player): boolean
 		return false
 	end
 	profiles[player] = nil
+	return saveProfile(player, profile, true)
+end
+
+-- Salva agora (sem esperar o autosave). Usado depois de compras com dinheiro real.
+function DataService:SaveNow(player: Player): boolean
+	local profile = profiles[player]
+	if not profile then
+		return false
+	end
 	return saveProfile(player, profile)
+end
+
+function DataService:GetBackendName(): string
+	return backendName
 end
 
 -- Retorna uma CÓPIA do valor (alterar a cópia não altera os dados salvos). nil se não carregado.
@@ -207,16 +235,29 @@ function DataService:SaveAll()
 	end
 end
 
-function DataService:Init()
-	if DataConfig.BACKEND ~= "Memory" then
-		log:Warn("Backend %s ainda não implementado (Fase 13). Usando memória.", DataConfig.BACKEND)
+function DataService:Init() end
+
+local function chooseBackend()
+	if DataConfig.BACKEND == "Memory" then
+		return
+	end
+	if DataConfig.BACKEND == "DataStore" or DataStoreBackend:IsAvailable() then
+		backend = DataStoreBackend :: any
+		backendName = "DataStore"
+	else
+		log:Warn(
+			"DataStore indisponível (no Studio: Game Settings > Security > Enable Studio Access to API Services). Usando memória."
+		)
 	end
 end
 
 function DataService:Start()
+	chooseBackend()
+	backendReady = true
+	log:Info("Salvamento: %s", backendName)
 	game:BindToClose(function()
 		for player, profile in profiles do
-			saveProfile(player, profile)
+			saveProfile(player, profile, true)
 		end
 	end)
 

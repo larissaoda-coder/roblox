@@ -388,6 +388,43 @@ function World.new(kind, name, options)
 	end
 	self.ProximityPromptService = promptService
 
+	-- DataStore simulado (em memória). options.dataStores permite dois servidores dividirem o mesmo "banco".
+	game.JobId = options.jobId or "Job-" .. tostring(math.random(1, 1e9))
+	local dataStoreService = service("DataStoreService")
+	local stores = options.dataStores or {}
+	self.DataStores = stores
+	dataStoreService.GetDataStore = function(_, name)
+		if options.dataStoreUnavailable then
+			error("DataStore indisponível (simulado)")
+		end
+		stores[name] = stores[name] or { Data = {}, FailNext = 0 }
+		local backing = stores[name]
+		local store = {}
+		local function maybeFail()
+			if backing.FailNext > 0 then
+				backing.FailNext -= 1
+				error("Falha de rede simulada")
+			end
+		end
+		function store:GetAsync(key)
+			maybeFail()
+			return backing.Data[key]
+		end
+		function store:UpdateAsync(key, transform)
+			maybeFail()
+			local result = transform(backing.Data[key])
+			if result ~= nil then
+				backing.Data[key] = result
+			end
+			return result
+		end
+		function store:SetAsync(key, value)
+			maybeFail()
+			backing.Data[key] = value
+		end
+		return store
+	end
+
 	-- Pathfinding simulado: nunca encontra caminho (quem usa deve ter um plano B).
 	local pathfinding = service("PathfindingService")
 	pathfinding.CreatePath = function()
