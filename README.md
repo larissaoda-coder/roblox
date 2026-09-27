@@ -1,6 +1,9 @@
 # NIGHT SHIFT: 4AM
 
-Horror cooperativo para Roblox. Arquitetura completa em [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+Horror cooperativo para Roblox.
+
+- **Guia do dono do jogo (comece aqui):** [`docs/GUIA.md`](docs/GUIA.md)
+- **Arquitetura técnica:** [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 
 ## Como o projeto funciona
 
