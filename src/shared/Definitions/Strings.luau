@@ -184,6 +184,12 @@ local LANGUAGES: { [string]: StringTable } = {
 		SETTING_REDUCED_FLASHES = "Reduce flashes",
 		SETTING_REDUCED_EFFECTS = "Reduced effects",
 		SETTING_CAMERA_SHAKE = "Camera shake",
+
+		PHONE_LINE_WRONG_NUMBER = '"Is this Route 44? …Sorry. Wrong number."',
+		PHONE_LINE_MANAGER = '"It\'s the manager. Did you lock the back door? …Good. Keep it locked."',
+		PHONE_LINE_SILENCE = "(silence… then slow breathing)",
+		PHONE_LINE_COUNT = '"How many of you are working tonight? …Are you sure?"',
+		PHONE_LINE_DONT_ANSWER = '"You weren\'t supposed to answer."',
 	},
 	pt = {
 		GAME_TITLE = "NIGHT SHIFT: 4AM",
@@ -364,6 +370,12 @@ local LANGUAGES: { [string]: StringTable } = {
 		SETTING_REDUCED_FLASHES = "Reduzir flashes",
 		SETTING_REDUCED_EFFECTS = "Efeitos reduzidos",
 		SETTING_CAMERA_SHAKE = "Tremor de câmera",
+
+		PHONE_LINE_WRONG_NUMBER = '"É do posto Rota 44? …Desculpa. Número errado."',
+		PHONE_LINE_MANAGER = '"É o gerente. Você trancou a porta dos fundos? …Ótimo. Mantenha trancada."',
+		PHONE_LINE_SILENCE = "(silêncio… depois, uma respiração lenta)",
+		PHONE_LINE_COUNT = '"Quantos de vocês estão trabalhando hoje? …Tem certeza?"',
+		PHONE_LINE_DONT_ANSWER = '"Você não devia ter atendido."',
 	},
 }
 

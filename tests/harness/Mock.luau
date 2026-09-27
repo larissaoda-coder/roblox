@@ -147,6 +147,9 @@ end
 Vector3Meta.__index = function(self, key)
 	if key == "Magnitude" then
 		return math.sqrt(self.X ^ 2 + self.Y ^ 2 + self.Z ^ 2)
+	elseif key == "Unit" then
+		local magnitude = math.sqrt(self.X ^ 2 + self.Y ^ 2 + self.Z ^ 2)
+		return newVector3(self.X / magnitude, self.Y / magnitude, self.Z / magnitude)
 	end
 	return nil
 end
@@ -257,6 +260,10 @@ local SUPERCLASSES = {
 	Frame = { "GuiObject", "GuiBase2d" },
 	ScrollingFrame = { "GuiObject", "GuiBase2d" },
 	Model = { "PVInstance" },
+	SurfaceLight = { "Light" },
+	SpotLight = { "Light" },
+	PointLight = { "Light" },
+	WedgePart = { "BasePart", "PVInstance" },
 }
 
 -- Eventos específicos de algumas classes.
@@ -271,6 +278,7 @@ local CLASS_SIGNALS = {
 		"PromptHidden",
 	},
 	TextBox = { "FocusLost", "Focused" },
+	Sound = { "Ended", "Played" },
 }
 
 local DEFAULTS = {
@@ -294,6 +302,7 @@ local NILLABLE = {
 	Adornee = true,
 	SelectedObject = true,
 	Character = true,
+	CameraSubject = true,
 }
 
 -- Ouvintes globais (usados pelo CollectionService simulado de cada mundo).
@@ -502,6 +511,14 @@ function Mock.newInstance(className, name)
 			current = current.Parent
 		end
 		return nil
+	end
+
+	function methods:Play()
+		props.IsPlaying = true
+	end
+
+	function methods:Stop()
+		props.IsPlaying = false
 	end
 
 	function methods:InputHoldBegin()

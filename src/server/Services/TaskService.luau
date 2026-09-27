@@ -203,16 +203,32 @@ local function selectTasks(mapId: string, rng: Rng.Rng): { ActiveTask }
 	end
 
 	local selected: { TaskDefinition } = {}
-	while #selected < TaskConfig.TASKS_PER_SHIFT and #candidates > 0 do
-		local pick = rng:WeightedPick(candidates, function(definition: TaskDefinition)
-			return definition.Weight
-		end)
-		if not pick then
-			break
+	local function pickFrom(pool: { TaskDefinition }, amount: number)
+		for _ = 1, amount do
+			local pick = rng:WeightedPick(pool, function(definition: TaskDefinition)
+				return definition.Weight
+			end)
+			if not pick then
+				return
+			end
+			table.insert(selected, pick)
+			table.remove(pool, table.find(pool, pick) :: number)
+			local index = table.find(candidates, pick)
+			if index then
+				table.remove(candidates, index)
+			end
 		end
-		table.insert(selected, pick)
-		table.remove(candidates, table.find(candidates, pick) :: number)
 	end
+
+	-- Garante tarefas disponíveis logo às 04:00 (senão o começo do turno fica vazio).
+	local earlyPool = {}
+	for _, definition in candidates do
+		if definition.MinMinute <= 0 then
+			table.insert(earlyPool, definition)
+		end
+	end
+	pickFrom(earlyPool, math.min(TaskConfig.INITIAL_TASKS, TaskConfig.TASKS_PER_SHIFT))
+	pickFrom(candidates, TaskConfig.TASKS_PER_SHIFT - #selected)
 
 	-- Ordem de liberação: primeiro as que podem aparecer mais cedo.
 	table.sort(selected, function(a, b)
@@ -367,6 +383,23 @@ function TaskService:GetActiveTaskIds(): { string }
 		end
 	end
 	return ids
+end
+
+-- Pontos que alguém poderia usar agora (tarefa liberada, passo disponível).
+function TaskService:GetAvailablePoints(): { { TaskId: string, Point: string, Instance: Instance } }
+	local list = {}
+	for _, activeTask in tasks do
+		for _, step in activeTask.Definition.Steps do
+			if isStepAvailable(activeTask, step.Point) then
+				table.insert(list, {
+					TaskId = activeTask.Definition.Id,
+					Point = step.Point,
+					Instance = points[activeTask.Definition.Id][step.Point],
+				})
+			end
+		end
+	end
+	return list
 end
 
 function TaskService:GetPoint(taskId: string, pointName: string): Instance?

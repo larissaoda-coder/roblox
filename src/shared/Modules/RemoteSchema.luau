@@ -119,6 +119,42 @@ local RemoteSchema: { [string]: RemoteSpec } = {
 		Direction = "ServerToClient",
 	},
 
+	-- Percepção (efeitos que só um jogador vê/ouve) ---------------------------
+	-- (kind, data) kind = "Sound" | "Figure" | "FakeDoor"
+	Perception = {
+		Kind = "Event",
+		Direction = "ServerToClient",
+	},
+
+	-- Câmeras de segurança ---------------------------------------------------
+	-- ({ câmeras }) abre o monitor no cliente.
+	CameraFeedOpened = {
+		Kind = "Event",
+		Direction = "ServerToClient",
+	},
+	-- () o servidor fechou o monitor (ex.: jogador se afastou).
+	CameraFeedClosed = {
+		Kind = "Event",
+		Direction = "ServerToClient",
+	},
+	SetCameraView = {
+		Kind = "Event",
+		Direction = "ClientToServer",
+		RateLimit = { Max = 8, Per = 2 },
+		Args = { T.integer(1, 32) },
+	},
+	CloseCameraFeed = {
+		Kind = "Event",
+		Direction = "ClientToServer",
+		RateLimit = { Max = 4, Per = 2 },
+		Args = {},
+	},
+	-- (cameraId, anomalyType, data, duration) algo aparece numa câmera.
+	CameraAnomaly = {
+		Kind = "Event",
+		Direction = "ServerToClient",
+	},
+
 	-- Notificações -----------------------------------------------------------
 	-- (textKey: string, ...args) mensagem curta na tela do jogador.
 	Notify = {

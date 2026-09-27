@@ -11,6 +11,7 @@ local Shared = ReplicatedStorage.Shared
 local Log = require(Shared.Modules.Log)
 local Signal = require(Shared.Modules.Signal)
 
+local AudioService = require(script.Parent.AudioService)
 local InteractionService = require(script.Parent.InteractionService)
 
 local OPEN_ANGLE = math.rad(95)
@@ -69,6 +70,13 @@ function DoorService:SetOpen(door: BasePart, open: boolean, cause: string?, slam
 		{ CFrame = target }
 	):Play()
 	InteractionService:SetPromptKey(door, if open then "PROMPT_CLOSE_DOOR" else "PROMPT_OPEN_DOOR")
+	-- "Silent" = a porta muda sem barulho (evento: alguém só percebe quando olha).
+	if cause ~= "Silent" then
+		AudioService:PlayAt(
+			if slam then "DoorSlam" elseif open then "DoorOpen" else "DoorClose",
+			door.Position
+		)
+	end
 	log:Debug("Porta %s %s (%s)", door.Name, if open then "aberta" else "fechada", cause or "?")
 	DoorService.DoorChanged:Fire(door, open, cause or "Unknown", slam == true)
 end
