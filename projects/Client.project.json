@@ -1,0 +1,4 @@
+{
+  "name": "Client",
+  "tree": { "$path": "../src/client" }
+}
