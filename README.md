@@ -46,7 +46,12 @@ Tipo do objeto pelo nome do arquivo:
 
 Para gerar o place sem o VS Code: `rojo build place.project.json -o NightShift.rbxlx`.
 
-## Ferramentas de qualidade (opcional)
+## Verificação automática
 
-- `stylua src`: formata o código.
-- `rojo sourcemap default.project.json -o sourcemap.json`, depois `luau-lsp analyze --sourcemap=sourcemap.json src`: checagem de tipos.
+`./scripts/check.sh` roda, em ordem:
+1. Formatação (StyLua).
+2. Checagem de tipos (luau-lsp).
+3. Testes automatizados (Lune). O simulador em `tests/harness/` roda o código real com servidor + clientes simulados.
+4. Build do place.
+
+Ferramentas necessárias: rojo, stylua, luau-lsp e lune (veja `rokit.toml`).

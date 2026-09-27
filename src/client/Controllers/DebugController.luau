@@ -2,12 +2,11 @@
 -- Painel de debug. Aparece somente se:
 --   1. GameConfig.DEBUG_MODE = true, E
 --   2. o SERVIDOR confirmar que o jogador é admin (AdminService).
--- F3 mostra/esconde o painel no PC.
+-- F3 (teclado) ou DPadDown (controle) mostra/esconde o painel.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
 
 local Shared = ReplicatedStorage.Shared
 local GameConfig = require(Shared.Config.GameConfig)
@@ -17,9 +16,9 @@ local Strings = require(Shared.Definitions.Strings)
 local Trove = require(Shared.Modules.Trove)
 
 local Theme = require(script.Parent.Parent.UI.Theme)
+local InputController = require(script.Parent.InputController)
 
 local REFRESH_SECONDS = 1
-local TOGGLE_KEY = Enum.KeyCode.F3
 
 local log = Log.new("DebugController")
 
@@ -89,11 +88,18 @@ function DebugController:Start()
 		frames += 1
 	end)
 
-	trove:Connect(UserInputService.InputBegan, function(input: InputObject, gameProcessed: boolean)
-		if not gameProcessed and input.KeyCode == TOGGLE_KEY then
+	InputController:BindAction(
+		"ToggleDebug",
+		{ Keyboard = Enum.KeyCode.F3, Gamepad = Enum.KeyCode.DPadDown },
+		function()
 			screenGui.Enabled = not screenGui.Enabled
 		end
+	)
+	trove:Add(function()
+		InputController:UnbindAction("ToggleDebug")
 	end)
+
+	local localPlayer = Players.LocalPlayer
 
 	log:Info("Painel de debug ativo (F3 para esconder).")
 
@@ -102,7 +108,15 @@ function DebugController:Start()
 		frames = 0
 		task.wait(REFRESH_SECONDS)
 		local fps = math.floor(frames / (os.clock() - sampleStart) + 0.5)
-		label.Text = Strings.get("DEBUG_OVERLAY", GameConfig.GAME_VERSION, measurePing(), fps)
+		label.Text = Strings.get(
+			"DEBUG_OVERLAY",
+			GameConfig.GAME_VERSION,
+			measurePing(),
+			fps,
+			InputController:GetInputType(),
+			localPlayer:GetAttribute("Level") or 0,
+			localPlayer:GetAttribute("Cash") or 0
+		)
 	end
 end
 

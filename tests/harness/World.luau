@@ -222,6 +222,10 @@ function World.new(kind, name, options)
 
 	local game = Mock.newInstance("DataModel", "game")
 	self.game = game
+	self.closeCallbacks = {}
+	game.BindToClose = function(_, callback)
+		table.insert(self.closeCallbacks, callback)
+	end
 	function game:GetService(serviceName)
 		local service = game:FindFirstChild(serviceName)
 		if not service then
@@ -286,6 +290,10 @@ function World.new(kind, name, options)
 	userInputService.KeyboardEnabled = true
 	userInputService.GamepadEnabled = false
 	userInputService.MouseEnabled = true
+	self.LastInputType = Mock.Enum.UserInputType.Keyboard
+	userInputService.GetLastInputType = function()
+		return self.LastInputType
+	end
 	self.UserInputService = userInputService
 
 	local localizationService = service("LocalizationService")

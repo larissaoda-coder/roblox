@@ -88,10 +88,16 @@ test("Fase1/Unit: Strings escolhe idioma e formata", function()
 	Strings.setLocale("fr-fr")
 	expectEqual(Strings.getLanguage(), "en", "idioma sem tradução cai para en")
 	expectEqual(Strings.get("CHAVE_INEXISTENTE"), "CHAVE_INEXISTENTE", "chave inexistente")
+	Strings.setLocale("en-us")
 	expectEqual(
-		Strings.get("DEBUG_OVERLAY", "1.0", 10, 60),
-		"DEBUG · v1.0 · 10 ms · 60 FPS",
+		Strings.get("DEBUG_OVERLAY", "1.0", 10, 60, "Touch", 2, 50),
+		"DEBUG · v1.0 · 10 ms · 60 FPS · Touch · LVL 2 · $50",
 		"formatação"
+	)
+	expectEqual(
+		Strings.getForLocale("pt-br", "DEBUG_OVERLAY", "1.0", 1, 2, "Gamepad", 3, 4),
+		"DEBUG · v1.0 · 1 ms · 2 FPS · Gamepad · NÍV 3 · $4",
+		"getForLocale"
 	)
 end)
 
@@ -150,23 +156,23 @@ end)
 test("Fase1/TESTE 1: servidor e cliente iniciam e o painel de debug aparece", function(context)
 	local session = newSession(context)
 	local server = session.Server
-	Test.expectLog(server, "servidor pronto %(1 serviços, modo Local%)")
+	Test.expectLog(server, "servidor pronto %(%d+ serviços, modo Local%)")
 	expect(server.workspace:FindFirstChild("Runtime"), "Workspace.Runtime criado")
 	local remotes = server.game.ReplicatedStorage.Shared:FindFirstChild("Remotes")
 	expect(remotes and remotes:FindFirstChild("Ping"), "Remote Ping")
 	expect(remotes:FindFirstChild("RequestDebugAccess"), "Remote RequestDebugAccess")
 
 	local client = session:addClient("Player1", 1001)
-	Test.expectLog(client, "cliente pronto %(1 controllers, idioma pt%)")
+	Test.expectLog(client, "cliente pronto %(%d+ controllers, idioma pt%)")
 	Test.expectLog(client, "Painel de debug ativo")
 	local overlay = Test.waitFor(function()
 		return overlayOf(client)
 	end, 3, "DebugOverlay")
 	local label = overlay.Stats
 	Test.waitFor(function()
-		return string.match(label.Text, "^DEBUG · v0%.1%.0 · %d+ ms · %d+ FPS$")
+		return string.match(label.Text, "^DEBUG · v%d+%.%d+%.%d+ · %d+ ms · %d+ FPS · ")
 	end, 3, "texto do painel atualizado")
-	local fps = tonumber(string.match(label.Text, "(%d+) FPS$"))
+	local fps = tonumber(string.match(label.Text, "(%d+) FPS"))
 	expect(fps and fps > 20, `FPS plausível ({label.Text})`)
 	Test.expectNoErrors(server)
 	Test.expectNoErrors(client)

@@ -5,7 +5,7 @@
 
 Status: **APROVADA**. Decisões confirmadas: A = modo Local primeiro · B = Rojo · C = DataService próprio · D = EN + PT-BR.
 
-Fases concluídas: **Fase 1 — Arquitetura base**.
+Fases concluídas: **Fase 1 — Arquitetura base** · **Fase 2 — Sistema de jogadores**.
 
 ---
 
@@ -89,6 +89,7 @@ ReplicatedStorage
 │   │   ├── Signal [M]               -- eventos internos entre módulos
 │   │   ├── Trove [M]                -- limpeza de conexões/instâncias
 │   │   ├── Log [M]                  -- logs que respeitam DEBUG_MODE
+│   │   ├── TableUtil [M]            -- deepCopy, reconcile, deepFreeze
 │   │   ├── Rng [M]                  -- (Fase 4/6) RNG com seed por partida + sorteio ponderado
 │   │   └── StateMachine [M]         -- (Fase 4) usado por Match, Entity e NPCs
 │   └── Remotes [F]                  -- CRIADO AUTOMATICAMENTE pelo servidor (não criar à mão)
@@ -113,7 +114,10 @@ ServerScriptService
     │   ├── EntityDefinitions [M]
     │   ├── NPCDefinitions [M]
     │   ├── DialogueDefinitions [M]
-    │   └── AdminConfig [M]          -- ADMIN_USER_IDS = {}
+    │   ├── AdminConfig [M]          -- ADMIN_USER_IDS = {}
+    │   └── DataConfig [M]           -- template dos dados salvos, backend, autosave
+    ├── Data [F]                     -- backends de armazenamento usados pelo DataService
+    │   └── MemoryBackend [M]        -- Fase 2 (DataStoreBackend na Fase 13)
     └── Services [F]                 -- todos são ModuleScripts com :Init() e :Start()
         ├── DataService [M]
         ├── PlayerService [M]
@@ -254,7 +258,7 @@ Mantemos suas 21 fases, com **um ajuste**:
 | Fase | Entrega | Depende de |
 |---|---|---|
 | 1 Arquitetura base ✅ | Pastas, ServerMain, ClientMain, Loader, Net, RemoteSchema, RateLimiter, InstanceUtil, Log, Signal, Trove, GameConfig, Strings, Theme, AdminConfig, AdminService (autorização), DebugController | — |
-| 2 Jogadores | PlayerService, DataService (memória), InputController | 1 |
+| 2 Jogadores ✅ | PlayerService, DataService (memória), DataConfig, MemoryBackend, TableUtil, InputController | 1 |
 | 3 Lobby | LobbyService, LobbyController, UI do lobby | 1, 2 |
 | 4 Partida | MatchService, MapService, ClockService, HUD básico | 3 |
 | 5 Interação | InteractionService, InteractionController (PC/celular/controle) | 1, 4 |
@@ -372,3 +376,20 @@ Fluxo de construção do MVP: Fases 1 → 9, 11, 12, 13 (a Fase 10 – NPCs – 
 6. Texto exibido ao jogador vem de `Strings`; cores/fontes vêm de `Theme`.
 7. Logs via `Log.new("Nome")`; `:Debug` só aparece com `DEBUG_MODE`.
 8. Formatação: StyLua (`stylua src`). Checagem de tipos: luau-lsp (`--!strict` em todos os arquivos).
+
+---
+
+## 11. Contratos entre sistemas (Fase 2)
+
+- **Dados do jogador**: só o `DataService` escreve (`Set`, `Update`, `Increment`, `IncrementStat`). `Get` devolve cópia.
+  Campos em `DataConfig.PUBLIC_ATTRIBUTES` (Level, XP, Cash, NightTokens) viram atributos do `Player`, que o cliente lê.
+- **Ciclo de vida**: serviços usam `PlayerService.PlayerReady` / `PlayerService.PlayerLeaving`, nunca `Players.PlayerAdded` direto.
+  Atributos do Player: `Ready` (boolean) e `State` (`Loading` | `Lobby` | `InShift` | `Spectating`).
+- **Entrada**: controllers usam `InputController:BindAction(nome, { Keyboard, Gamepad }, fn)` e `InputController.InputTypeChanged`.
+
+## 12. Testes automatizados
+
+`tests/` contém um simulador do Roblox (Lune) que roda o código real de `src/` com 1 servidor + N clientes,
+Remotes simulados e atributos replicados. Cada fase tem seu arquivo em `tests/specs/`, espelhando os TESTES 1/2/3 do guia.
+Rodar tudo: `./scripts/check.sh` (formatação + tipos + testes + build do place).
+Limites: o simulador não renderiza, não tem física e não reproduz o DataStore real; o teste final continua sendo no Studio.

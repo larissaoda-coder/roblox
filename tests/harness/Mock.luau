@@ -165,6 +165,8 @@ function Mock.newInstance(className, name)
 	local childRemoved = Mock.newSignal()
 	local ancestryChanged = Mock.newSignal()
 	local destroying = Mock.newSignal()
+	local attributeChanged = Mock.newSignal()
+	local attributeSignals = {}
 
 	local methods = {}
 
@@ -246,7 +248,23 @@ function Mock.newInstance(className, name)
 	end
 
 	function methods:SetAttribute(key, value)
+		local valueType = typeof(value)
+		if value ~= nil and valueType ~= "string" and valueType ~= "number" and valueType ~= "boolean" then
+			error(`SetAttribute: tipo {valueType} não suportado em atributos`)
+		end
+		if attributes[key] == value then
+			return
+		end
 		attributes[key] = value
+		attributeChanged:Fire(key)
+		if attributeSignals[key] then
+			attributeSignals[key]:Fire()
+		end
+	end
+
+	function methods:GetAttributeChangedSignal(key)
+		attributeSignals[key] = attributeSignals[key] or Mock.newSignal()
+		return attributeSignals[key]
 	end
 
 	function methods:GetAttribute(key)
@@ -308,6 +326,7 @@ function Mock.newInstance(className, name)
 		ChildRemoved = childRemoved,
 		AncestryChanged = ancestryChanged,
 		Destroying = destroying,
+		AttributeChanged = attributeChanged,
 	}
 
 	setmetatable(self, {

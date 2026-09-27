@@ -5,3 +5,4 @@ sourcemap.json
 *.rbxlx.lock
 /build/
 /entregas/
+globalTypes.d.luau

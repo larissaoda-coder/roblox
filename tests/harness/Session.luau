@@ -150,19 +150,35 @@ function Session:addClient(name, userId, clientOptions)
 	local serverPlayer = Mock.newInstance("Player", name)
 	serverPlayer.UserId = userId
 	serverPlayer.DisplayName = name
+	serverPlayer.LocaleId = clientOptions.locale or "pt-br"
+	local client
 	serverPlayer.Kick = function(_, message)
 		self.Server:log("kick", name, message)
+		if client then
+			client.KickMessage = message
+			task.defer(function()
+				self:removeClient(client)
+			end)
+		end
 	end
 	serverPlayer.Parent = self.Server.Players
-	self.Server.Players.PlayerAdded:Fire(serverPlayer)
 
-	local client = World.new("Client", name, {
+	client = World.new("Client", name, {
 		verbose = self.Options.verbose,
 		studio = self.Options.studio,
 		locale = clientOptions.locale,
 	})
 	client.ServerPlayer = serverPlayer
 	client.Proxies = {}
+	if clientOptions.device == "Touch" then
+		client.UserInputService.TouchEnabled = true
+		client.UserInputService.KeyboardEnabled = false
+		client.UserInputService.MouseEnabled = false
+		client.LastInputType = Mock.Enum.UserInputType.None
+	elseif clientOptions.device == "Gamepad" then
+		client.UserInputService.GamepadEnabled = true
+		client.LastInputType = Mock.Enum.UserInputType.Gamepad1
+	end
 	table.insert(self.Clients, client)
 
 	local localPlayer = Mock.newInstance("Player", name)
@@ -171,14 +187,24 @@ function Session:addClient(name, userId, clientOptions)
 	Mock.newInstance("PlayerGui", "PlayerGui").Parent = localPlayer
 	local playerScripts = Mock.newInstance("PlayerScripts", "PlayerScripts")
 	playerScripts.Parent = localPlayer
+	localPlayer.LocaleId = serverPlayer.LocaleId
 	localPlayer.Parent = client.Players
 	client.Players.LocalPlayer = localPlayer
 	client.LocalPlayer = localPlayer
+
+	-- Atributos do Player replicam do servidor para o cliente (como no Roblox).
+	for key, value in serverPlayer:GetAttributes() do
+		localPlayer:SetAttribute(key, value)
+	end
+	serverPlayer.AttributeChanged:Connect(function(key)
+		localPlayer:SetAttribute(key, serverPlayer:GetAttribute(key))
+	end)
 
 	client:build(SRC .. "/shared", "Shared", self.Options.patches).Parent = client.game.ReplicatedStorage
 	client:build(SRC .. "/client", "Client", self.Options.patches).Parent = playerScripts
 
 	self:_replicateRemotes(client)
+	self.Server.Players.PlayerAdded:Fire(serverPlayer)
 
 	for _, descendant in playerScripts:GetDescendants() do
 		if descendant.ClassName == "LocalScript" then
@@ -191,9 +217,10 @@ end
 
 function Session:removeClient(client)
 	local index = table.find(self.Clients, client)
-	if index then
-		table.remove(self.Clients, index)
+	if not index then
+		return
 	end
+	table.remove(self.Clients, index)
 	client.Running = false
 	self.Server.Players.PlayerRemoving:Fire(client.ServerPlayer)
 	task.wait()
@@ -203,6 +230,13 @@ end
 -- Remote do lado do cliente (como se fosse usado pela Command Bar do Studio).
 function Session:clientRemote(client, remoteName)
 	return client.game.ReplicatedStorage.Shared.Remotes:FindFirstChild(remoteName)
+end
+
+-- Simula o fechamento do servidor: executa as funções registradas com game:BindToClose.
+function Session:shutdown()
+	for _, callback in self.Server.closeCallbacks do
+		callback()
+	end
 end
 
 function Session:stop()
