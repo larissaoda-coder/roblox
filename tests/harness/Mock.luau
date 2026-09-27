@@ -83,9 +83,37 @@ Mock.Vector2 = {
 		return datatype("Vector2", { X = x or 0, Y = y or 0 })
 	end,
 }
-Mock.Vector3 = {
+local Vector3Meta = {}
+local function newVector3(x, y, z)
+	return setmetatable({ __mockType = "Vector3", X = x or 0, Y = y or 0, Z = z or 0 }, Vector3Meta)
+end
+Vector3Meta.__add = function(a, b)
+	return newVector3(a.X + b.X, a.Y + b.Y, a.Z + b.Z)
+end
+Vector3Meta.__sub = function(a, b)
+	return newVector3(a.X - b.X, a.Y - b.Y, a.Z - b.Z)
+end
+Vector3Meta.__mul = function(a, b)
+	if type(b) == "number" then
+		return newVector3(a.X * b, a.Y * b, a.Z * b)
+	end
+	return newVector3(a.X * b.X, a.Y * b.Y, a.Z * b.Z)
+end
+Vector3Meta.__eq = function(a, b)
+	return a.X == b.X and a.Y == b.Y and a.Z == b.Z
+end
+Vector3Meta.__index = function(self, key)
+	if key == "Magnitude" then
+		return math.sqrt(self.X ^ 2 + self.Y ^ 2 + self.Z ^ 2)
+	end
+	return nil
+end
+Mock.Vector3 = { new = newVector3, zero = newVector3(0, 0, 0) }
+
+Mock.CFrame = {
 	new = function(x, y, z)
-		return datatype("Vector3", { X = x or 0, Y = y or 0, Z = z or 0 })
+		local position = if type(x) == "table" then x else newVector3(x, y, z)
+		return datatype("CFrame", { Position = position })
 	end,
 }
 Mock.UDim = {
@@ -161,6 +189,7 @@ local NILLABLE = {
 	PrimaryPart = true,
 	Adornee = true,
 	SelectedObject = true,
+	Character = true,
 }
 
 function Mock.isInstance(value)
@@ -297,6 +326,34 @@ function Mock.newInstance(className, name)
 
 	function methods:GetAttributes()
 		return table.clone(attributes)
+	end
+
+	function methods:Clone()
+		local copy = Mock.newInstance(className, props.Name)
+		for key, value in props do
+			if key ~= "ClassName" and key ~= "Name" then
+				copy[key] = value
+			end
+		end
+		for key, value in attributes do
+			copy:SetAttribute(key, value)
+		end
+		for _, child in children do
+			child:Clone().Parent = copy
+		end
+		return copy
+	end
+
+	function methods:PivotTo(cframe)
+		props.__pivot = cframe
+		local root = self:FindFirstChild("HumanoidRootPart")
+		if root then
+			root.Position = cframe.Position
+		end
+	end
+
+	function methods:GetPivot()
+		return props.__pivot or Mock.CFrame.new(props.Position or newVector3(0, 0, 0))
 	end
 
 	function methods:ClearAllChildren()

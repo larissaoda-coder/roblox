@@ -124,6 +124,7 @@ function World:makeEnv(scriptInstance)
 		Enum = Mock.Enum,
 		Vector2 = Mock.Vector2,
 		Vector3 = Mock.Vector3,
+		CFrame = Mock.CFrame,
 		UDim = Mock.UDim,
 		UDim2 = Mock.UDim2,
 		Color3 = Mock.Color3,

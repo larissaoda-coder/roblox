@@ -133,12 +133,13 @@ test("Fase3/TESTE 1: jogador abre JOGAR, cria turno, fica pronto e inicia", func
 	end, 2, "INICIAR liberado")
 	expect(party.Ready[client.ServerPlayer], "pronto no servidor")
 
-	-- Sem MatchService (Fase 4), o servidor responde que ainda não dá para iniciar.
+	-- A partir da Fase 4, iniciar leva o jogador para a partida e esconde o lobby.
 	click(client, "StartButton")
 	Test.waitFor(function()
-		return toastText(client) == "Os turnos ainda não podem começar. Chega na próxima atualização."
-	end, 2, "mensagem de indisponível")
-	expect(not party.Launching, "turno voltou ao normal")
+		return client.LocalPlayer:GetAttribute("State") == "InShift"
+	end, 2, "jogador em turno")
+	expect(not gui.Enabled, "lobby escondido durante o turno")
+	expect(lobbyService(session):GetPartyOf(client.ServerPlayer) == nil, "grupo desfeito ao iniciar")
 	Test.expectNoErrors(session.Server)
 	Test.expectNoErrors(client)
 end)

@@ -78,6 +78,42 @@ function Session.new(options)
 	return self
 end
 
+-- Replica uma instância do servidor para um cliente, mantendo atributos e filhos sincronizados.
+local function mirror(serverInstance, clientParent)
+	local copy = Mock.newInstance(serverInstance.ClassName, serverInstance.Name)
+	for key, value in serverInstance:GetAttributes() do
+		copy:SetAttribute(key, value)
+	end
+	serverInstance.AttributeChanged:Connect(function(key)
+		copy:SetAttribute(key, serverInstance:GetAttribute(key))
+	end)
+	for _, child in serverInstance:GetChildren() do
+		mirror(child, copy)
+	end
+	serverInstance.ChildAdded:Connect(function(child)
+		mirror(child, copy)
+	end)
+	copy.Parent = clientParent
+	return copy
+end
+
+function Session:_replicateStorage(client)
+	local serverStorage = self.Server.game.ReplicatedStorage
+	local function replicate(child)
+		if child.Name ~= "Shared" then
+			mirror(child, client.game.ReplicatedStorage)
+		end
+	end
+	for _, child in serverStorage:GetChildren() do
+		replicate(child)
+	end
+	serverStorage.ChildAdded:Connect(function(child)
+		if client.Running then
+			replicate(child)
+		end
+	end)
+end
+
 function Session:_clientFor(serverPlayer)
 	for _, client in self.Clients do
 		if client.ServerPlayer == serverPlayer then
@@ -161,6 +197,24 @@ function Session:addClient(name, userId, clientOptions)
 			end)
 		end
 	end
+	serverPlayer.CharacterAdded = Mock.newSignal()
+	serverPlayer.LoadCount = 0
+	-- Personagem simulado: Model com HumanoidRootPart. LoadCharacter cria um novo (como renascer).
+	serverPlayer.LoadCharacter = function()
+		local old = serverPlayer.Character
+		if old then
+			old:Destroy()
+		end
+		local character = Mock.newInstance("Model", name)
+		local root = Mock.newInstance("Part", "HumanoidRootPart")
+		root.Position = Mock.Vector3.new(0, 3, 14) -- spawn do lobby
+		root.Parent = character
+		Mock.newInstance("Humanoid", "Humanoid").Parent = character
+		character.Parent = self.Server.workspace
+		serverPlayer.Character = character
+		serverPlayer.LoadCount += 1
+		serverPlayer.CharacterAdded:Fire(character)
+	end
 	serverPlayer.Parent = self.Server.Players
 
 	client = World.new("Client", name, {
@@ -206,7 +260,9 @@ function Session:addClient(name, userId, clientOptions)
 	client:build(SRC .. "/client", "Client", self.Options.patches).Parent = playerScripts
 
 	self:_replicateRemotes(client)
+	self:_replicateStorage(client)
 	self.Server.Players.PlayerAdded:Fire(serverPlayer)
+	serverPlayer.LoadCharacter()
 
 	for _, descendant in playerScripts:GetDescendants() do
 		if descendant.ClassName == "LocalScript" then

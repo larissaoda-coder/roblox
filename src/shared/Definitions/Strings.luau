@@ -84,6 +84,14 @@ local LANGUAGES: { [string]: StringTable } = {
 		LOBBY_ERR_ServerBusy = "A shift is already running on this server. Please wait.",
 		LOBBY_ERR_RateLimited = "Slow down a little.",
 		LOBBY_ERR_Unknown = "Something went wrong. Try again.",
+
+		HUD_TITLE = "NIGHT SHIFT",
+		HUD_OBJECTIVE_LABEL = "OBJECTIVE",
+		HUD_LOADING = "PREPARING SHIFT…",
+		HUD_BRIEFING = "YOUR SHIFT STARTS NOW",
+		HUD_OBJECTIVE_BRIEFING = "Keep the station running until 5 AM.",
+		HUD_OBJECTIVE_DEFAULT = "KEEP THE STATION RUNNING",
+		HUD_SHIFT_COMPLETE = "SHIFT COMPLETE",
 	},
 	pt = {
 		GAME_TITLE = "NIGHT SHIFT: 4AM",
@@ -164,6 +172,14 @@ local LANGUAGES: { [string]: StringTable } = {
 		LOBBY_ERR_ServerBusy = "Já existe um turno acontecendo neste servidor. Aguarde.",
 		LOBBY_ERR_RateLimited = "Calma, vá mais devagar.",
 		LOBBY_ERR_Unknown = "Algo deu errado. Tente de novo.",
+
+		HUD_TITLE = "NIGHT SHIFT",
+		HUD_OBJECTIVE_LABEL = "OBJETIVO",
+		HUD_LOADING = "PREPARANDO TURNO…",
+		HUD_BRIEFING = "SEU TURNO COMEÇOU",
+		HUD_OBJECTIVE_BRIEFING = "Mantenha o posto funcionando até as 5h.",
+		HUD_OBJECTIVE_DEFAULT = "MANTENHA O POSTO FUNCIONANDO",
+		HUD_SHIFT_COMPLETE = "TURNO CONCLUÍDO",
 	},
 }
 
