@@ -26,20 +26,24 @@ export type Match = {
 	StartedAt: number,
 	Aborted: boolean,
 	Ended: boolean,
+	Dead: { [Player]: boolean },
+	AllDead: boolean,
 }
 
 export type MatchResult = {
 	MatchId: string,
 	MapId: string,
 	Completed: boolean,
+	AllDead: boolean,
 	DurationSeconds: number,
 	Players: { Player },
+	Survivors: { Player },
 }
 
 local PHASE_TRANSITIONS = {
 	Idle = { "Loading" },
 	Loading = { "Briefing", "Cleanup" },
-	Briefing = { "Shift", "Cleanup" },
+	Briefing = { "Shift", "Results", "Cleanup" },
 	Shift = { "Results", "Cleanup" },
 	Results = { "Cleanup" },
 	Cleanup = { "Idle" },
@@ -83,12 +87,20 @@ local function waitUnlessAborted(match: Match, seconds: number)
 end
 
 local function buildResult(match: Match, completed: boolean): MatchResult
+	local survivors = {}
+	for _, player in match.Players do
+		if not match.Dead[player] then
+			table.insert(survivors, player)
+		end
+	end
 	return {
 		MatchId = match.Id,
 		MapId = match.MapId,
 		Completed = completed,
+		AllDead = match.AllDead,
 		DurationSeconds = os.clock() - match.StartedAt,
 		Players = table.clone(match.Players),
+		Survivors = survivors,
 	}
 end
 
@@ -145,9 +157,12 @@ local function runMatch(match: Match)
 		end
 
 		stateFolder:SetAttribute("Completed", completed)
+		stateFolder:SetAttribute("AllDead", match.AllDead)
 		MatchService.MatchEnded:Fire(match, buildResult(match, completed))
 
-		if completed then
+		-- Resultado aparece no fim normal E quando a equipe inteira morreu (turno fracassado).
+		if completed or match.AllDead then
+			match.Aborted = false
 			setPhase("Results")
 			waitUnlessAborted(match, MatchConfig.RESULTS_SECONDS)
 		end
@@ -186,11 +201,14 @@ local function launch(request): (boolean, string?)
 		StartedAt = os.clock(),
 		Aborted = false,
 		Ended = false,
+		Dead = {},
+		AllDead = false,
 	}
 	activeMatch = match
 	stateFolder:SetAttribute("MatchId", match.Id)
 	stateFolder:SetAttribute("MapId", match.MapId)
 	stateFolder:SetAttribute("Completed", false)
+	stateFolder:SetAttribute("AllDead", false)
 
 	-- Marca como "em turno" imediatamente para ninguém criar/entrar em outro grupo no meio do caminho.
 	for _, player in players do
@@ -215,6 +233,39 @@ end
 function MatchService:IsPlayerInMatch(player: Player): boolean
 	local match = activeMatch
 	return match ~= nil and not match.Ended and table.find(match.Players, player) ~= nil
+end
+
+-- Jogadores da partida que ainda estão vivos.
+function MatchService:GetAlivePlayers(): { Player }
+	local match = activeMatch
+	local alive = {}
+	if match then
+		for _, player in match.Players do
+			if not match.Dead[player] then
+				table.insert(alive, player)
+			end
+		end
+	end
+	return alive
+end
+
+function MatchService:IsAlive(player: Player): boolean
+	local match = activeMatch
+	return match ~= nil and table.find(match.Players, player) ~= nil and not match.Dead[player]
+end
+
+-- Chamado pelo SpectatorService. Se todos morrerem, o turno termina (fracasso).
+function MatchService:MarkDead(player: Player)
+	local match = activeMatch
+	if not match or match.Dead[player] then
+		return
+	end
+	match.Dead[player] = true
+	if #self:GetAlivePlayers() == 0 then
+		log:Info("Toda a equipe morreu na partida %s.", match.Id)
+		match.AllDead = true
+		match.Aborted = true
+	end
 end
 
 -- Encerra a partida atual antes do fim (ex.: comando de admin no futuro).
@@ -250,7 +301,8 @@ local function watchCharacter(player: Player)
 			return
 		end
 		task.defer(function()
-			if MatchService:IsPlayerInMatch(player) then
+			-- Espectadores ficam no lobby (fora do mapa); só os vivos voltam ao mapa.
+			if MatchService:IsAlive(player) then
 				MapService:PlaceCharacter(player, table.find(match.Players, player) or 1)
 			end
 		end)

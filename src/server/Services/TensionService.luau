@@ -27,9 +27,9 @@ local tension: { [Player]: number } = {}
 local running = false
 local random = Random.new()
 
+-- Só jogadores VIVOS: espectadores não recebem eventos nem tensão.
 local function matchPlayers(): { Player }
-	local match = MatchService:GetActiveMatch()
-	return if match then match.Players else {}
+	return MatchService:GetAlivePlayers()
 end
 
 local function setTension(player: Player, value: number)
@@ -156,6 +156,13 @@ local function start()
 			for _, player in matchPlayers() do
 				if tension[player] ~= nil then
 					tick(player)
+				end
+			end
+			-- Quem morreu não sente mais tensão.
+			for player in tension do
+				if not MatchService:IsAlive(player) then
+					tension[player] = nil
+					player:SetAttribute("Tension", nil)
 				end
 			end
 		end

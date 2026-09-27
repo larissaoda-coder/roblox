@@ -102,9 +102,9 @@ local SERVICES = {
 	NPCs = NPCService,
 }
 
+-- Só jogadores VIVOS: espectadores não recebem eventos nem tensão.
 local function matchPlayers(): { Player }
-	local match = MatchService:GetActiveMatch()
-	return if match then match.Players else {}
+	return MatchService:GetAlivePlayers()
 end
 
 local function recordDiscovery(player: Player, definition: EventDefinition)

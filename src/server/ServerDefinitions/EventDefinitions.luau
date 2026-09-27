@@ -214,6 +214,30 @@ local EVENTS: { EventDefinition } = {
 	}),
 	event({ Id = "OldManStory", Rarity = "RARE", Intensity = 1, DiscoveryOnly = true, Tags = { "Lore" } }),
 
+	-- Entidade (controlada pelo EntityService; aqui só para contar descobertas)
+	event({
+		Id = "EntitySighting",
+		Rarity = "RARE",
+		Intensity = 3,
+		DiscoveryOnly = true,
+		Tags = { "Entity" },
+	}),
+	event({ Id = "EntityStalked", Rarity = "RARE", Intensity = 3, DiscoveryOnly = true, Tags = { "Entity" } }),
+	event({
+		Id = "EntityManifest",
+		Rarity = "VERY_RARE",
+		Intensity = 4,
+		DiscoveryOnly = true,
+		Tags = { "Entity" },
+	}),
+	event({
+		Id = "EntityHunt",
+		Rarity = "VERY_RARE",
+		Intensity = 5,
+		DiscoveryOnly = true,
+		Tags = { "Entity" },
+	}),
+
 	-- Horários especiais
 	event({
 		Id = "KnockBackDoor",

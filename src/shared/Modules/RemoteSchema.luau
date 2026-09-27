@@ -173,6 +173,13 @@ local RemoteSchema: { [string]: RemoteSpec } = {
 		Direction = "ServerToClient",
 	},
 
+	-- Espectador ---------------------------------------------------------------
+	-- ({ { UserId, Name } }) colegas vivos que o espectador pode acompanhar.
+	SpectateTargets = {
+		Kind = "Event",
+		Direction = "ServerToClient",
+	},
+
 	-- Notificações -----------------------------------------------------------
 	-- (textKey: string, ...args) mensagem curta na tela do jogador.
 	Notify = {

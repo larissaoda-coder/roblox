@@ -279,9 +279,11 @@ local CLASS_SIGNALS = {
 	},
 	TextBox = { "FocusLost", "Focused" },
 	Sound = { "Ended", "Played" },
+	Humanoid = { "Died", "HealthChanged" },
 }
 
 local DEFAULTS = {
+	Humanoid = { Health = 100, MaxHealth = 100, WalkSpeed = 16 },
 	ProximityPrompt = {
 		Enabled = true,
 		HoldDuration = 0,

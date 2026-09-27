@@ -388,9 +388,28 @@ function World.new(kind, name, options)
 	end
 	self.ProximityPromptService = promptService
 
+	-- Pathfinding simulado: nunca encontra caminho (quem usa deve ter um plano B).
+	local pathfinding = service("PathfindingService")
+	pathfinding.CreatePath = function()
+		local path = { Status = Mock.Enum.PathStatus.NoPath }
+		function path:ComputeAsync() end
+		function path:GetWaypoints()
+			return {}
+		end
+		return path
+	end
+
 	local players = service("Players")
 	players.PlayerAdded = Mock.newSignal()
 	players.PlayerRemoving = Mock.newSignal()
+	players.GetPlayerByUserId = function(_, userId)
+		for _, child in players:GetChildren() do
+			if child.ClassName == "Player" and child.UserId == userId then
+				return child
+			end
+		end
+		return nil
+	end
 	players.GetPlayers = function()
 		local list = {}
 		for _, child in players:GetChildren() do

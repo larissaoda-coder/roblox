@@ -76,7 +76,8 @@ function HUDController:Start()
 	screen = hud
 
 	local function refresh()
-		local inShift = player:GetAttribute("State") == "InShift"
+		local playerState = player:GetAttribute("State")
+		local inShift = playerState == "InShift" or playerState == "Spectating"
 		hud:SetVisible(inShift)
 		if not inShift then
 			return
@@ -96,7 +97,8 @@ function HUDController:Start()
 			hud:SetBanner(nil)
 			hud:SetObjective(currentObjective())
 		elseif phase == "Results" then
-			hud:SetBanner(Strings.get("HUD_SHIFT_COMPLETE"))
+			local failed = matchState:GetAttribute("AllDead") == true
+			hud:SetBanner(Strings.get(if failed then "HUD_SHIFT_FAILED" else "HUD_SHIFT_COMPLETE"))
 			hud:SetObjective(nil)
 		else
 			hud:SetBanner(nil)
