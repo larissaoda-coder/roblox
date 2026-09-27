@@ -3,7 +3,9 @@
 > Documento-fonte da arquitetura. Toda nova funcionalidade deve seguir os nomes e a estrutura definidos aqui.
 > Se algo aqui mudar, este arquivo é atualizado **antes** do código.
 
-Status: **PROPOSTA — aguardando confirmação** (nenhum código de jogo foi escrito ainda).
+Status: **APROVADA**. Decisões confirmadas: A = modo Local primeiro · B = Rojo · C = DataService próprio · D = EN + PT-BR.
+
+Fases concluídas: **Fase 1 — Arquitetura base**.
 
 ---
 
@@ -77,13 +79,18 @@ ReplicatedStorage
 │   │   └── Strings [M]              -- textos EN / PT-BR
 │   ├── Modules [F]
 │   │   ├── Net [M]                  -- camada única de Remotes (validação + rate limit)
+│   │   │   ├── Server [M]           -- API do servidor (on / handle / fire / fireAll / fireList)
+│   │   │   ├── Client [M]           -- API do cliente (fire / invoke / on)
+│   │   │   └── T [M]                -- validadores de argumentos
 │   │   ├── RemoteSchema [M]         -- lista de todos os Remotes e seus argumentos
+│   │   ├── Loader [M]               -- ciclo de vida Init → Start de Services/Controllers
+│   │   ├── RateLimiter [M]          -- limite de chamadas por jogador (token bucket)
+│   │   ├── InstanceUtil [M]         -- WaitForChild com timeout, getOrCreate
 │   │   ├── Signal [M]               -- eventos internos entre módulos
 │   │   ├── Trove [M]                -- limpeza de conexões/instâncias
 │   │   ├── Log [M]                  -- logs que respeitam DEBUG_MODE
-│   │   ├── Random [M]               -- RNG com seed por partida + sorteio ponderado
-│   │   ├── StateMachine [M]         -- usado por Match, Entity e NPCs
-│   │   └── Types [M]                -- tipos Luau compartilhados
+│   │   ├── Rng [M]                  -- (Fase 4/6) RNG com seed por partida + sorteio ponderado
+│   │   └── StateMachine [M]         -- (Fase 4) usado por Match, Entity e NPCs
 │   └── Remotes [F]                  -- CRIADO AUTOMATICAMENTE pelo servidor (não criar à mão)
 └── Assets [F]
     ├── Sounds [F]
@@ -180,7 +187,8 @@ Workspace
 5. **UI criada por código** (componentes reutilizáveis + tema). É mais fácil manter consistência visual e responsividade PC/celular/console, e o código fica versionado. Elementos muito visuais podem ser feitos no Studio e apenas controlados pelo código.
 6. **`CameraService` → `SecurityCameraService`.** "Camera" no Roblox já significa a câmera do jogador; o nome evita confusão.
 7. **Serviços novos**: `DirectorService` (ritmo), `TensionService`, `ClockService`, `MapService`, `InteractionService`, `LightingService`, `AudioService`, `SpectatorService`, `RewardService`, `AdminService`, `LobbyService`, `ProgressionService`, `DialogueService`, `LeaderboardService`.
-8. **Nome `BadgeService`** colide com o serviço nativo do Roblox. O módulo será chamado **`AchievementService`** (lida com badges nativas + conquistas internas). Os nomes da árvore acima valem com essa troca.
+8. **`Random` → `Rng`**: `Random` já é uma classe nativa do Luau. `Rng` e `StateMachine` serão criados quando o primeiro sistema precisar deles (Fases 4 e 6), para não entregar código sem uso.
+9. **Nome `BadgeService`** colide com o serviço nativo do Roblox. O módulo será chamado **`AchievementService`** (lida com badges nativas + conquistas internas). Os nomes da árvore acima valem com essa troca.
 
 ---
 
@@ -245,7 +253,7 @@ Mantemos suas 21 fases, com **um ajuste**:
 
 | Fase | Entrega | Depende de |
 |---|---|---|
-| 1 Arquitetura base | Pastas, ServerMain, ClientMain, Net, RemoteSchema, Log, Signal, Trove, Random, StateMachine, GameConfig, Strings, Theme | — |
+| 1 Arquitetura base ✅ | Pastas, ServerMain, ClientMain, Loader, Net, RemoteSchema, RateLimiter, InstanceUtil, Log, Signal, Trove, GameConfig, Strings, Theme, AdminConfig, AdminService (autorização), DebugController | — |
 | 2 Jogadores | PlayerService, DataService (memória), InputController | 1 |
 | 3 Lobby | LobbyService, LobbyController, UI do lobby | 1, 2 |
 | 4 Partida | MatchService, MapService, ClockService, HUD básico | 3 |
@@ -351,3 +359,16 @@ TensionService <──> DirectorService
 | Fora do MVP | NPCs/diálogos, loja, inventário, monetização, clima variado, leaderboards, múltiplos mapas. |
 
 Fluxo de construção do MVP: Fases 1 → 9, 11, 12, 13 (a Fase 10 – NPCs – fica para logo após o MVP, já que não está na lista do MVP).
+
+---
+
+## 10. Regras de código (valem para todas as fases)
+
+1. Servidor tem **um** Script (`ServerMain`); cliente tem **um** LocalScript (`ClientMain`). Todo o resto é ModuleScript.
+2. Services/Controllers expõem `Init()` (não espera, não chama outros módulos; registra handlers de Remotes) e `Start()` (pode esperar e usar outros módulos).
+3. Remotes só existem no `RemoteSchema`. Todo Remote cliente → servidor tem `RateLimit` e `Args`.
+4. O cliente só envia **intenções**. Valores (moeda, XP, progresso) nunca vêm do cliente.
+5. Nada de `WaitForChild` sem timeout: use `InstanceUtil.waitForChild`.
+6. Texto exibido ao jogador vem de `Strings`; cores/fontes vêm de `Theme`.
+7. Logs via `Log.new("Nome")`; `:Debug` só aparece com `DEBUG_MODE`.
+8. Formatação: StyLua (`stylua src`). Checagem de tipos: luau-lsp (`--!strict` em todos os arquivos).

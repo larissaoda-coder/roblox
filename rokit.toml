@@ -1,0 +1,4 @@
+# Ferramentas do projeto (opcional). Com o Rokit instalado, rode `rokit install`.
+[tools]
+rojo = "rojo-rbx/rojo@7.4.4"
+stylua = "JohnnyMorganz/StyLua@0.20.0"
