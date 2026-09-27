@@ -1,0 +1,346 @@
+--!nocheck
+-- Simulação mínima da API do Roblox para rodar o código de src/ fora do Studio (com Lune).
+-- Implementa apenas o que o jogo usa. Acessar uma propriedade/filho inexistente gera erro,
+-- assim como no Roblox, para que erros de digitação apareçam nos testes.
+
+local task = require("@lune/task")
+
+local Mock = {}
+
+local instanceSet = setmetatable({}, { __mode = "k" })
+
+-- Signal (RBXScriptSignal) -----------------------------------------------------------
+function Mock.newSignal()
+	local listeners = {}
+	local signal = { __mockType = "RBXScriptSignal" }
+
+	function signal:Connect(callback)
+		local connection = { __mockType = "RBXScriptConnection", Connected = true }
+		function connection:Disconnect()
+			connection.Connected = false
+			local index = table.find(listeners, connection)
+			if index then
+				table.remove(listeners, index)
+			end
+		end
+		connection.callback = callback
+		table.insert(listeners, connection)
+		return connection
+	end
+
+	function signal:Once(callback)
+		local connection
+		connection = signal:Connect(function(...)
+			connection:Disconnect()
+			callback(...)
+		end)
+		return connection
+	end
+
+	function signal:Fire(...)
+		for _, connection in table.clone(listeners) do
+			if connection.Connected then
+				task.spawn(connection.callback, ...)
+			end
+		end
+	end
+
+	function signal:Wait()
+		local thread = coroutine.running()
+		signal:Once(function(...)
+			task.spawn(thread, ...)
+		end)
+		return coroutine.yield()
+	end
+
+	return signal
+end
+
+-- Enum ------------------------------------------------------------------------------
+local enumCache = {}
+Mock.Enum = setmetatable({}, {
+	__index = function(_, enumType)
+		enumCache[enumType] = enumCache[enumType]
+			or setmetatable({}, {
+				__index = function(items, itemName)
+					local item = { __mockType = "EnumItem", EnumType = enumType, Name = itemName }
+					rawset(items, itemName, item)
+					return item
+				end,
+			})
+		return enumCache[enumType]
+	end,
+})
+
+-- Datatypes ---------------------------------------------------------------------------
+local function datatype(typeName, fields)
+	fields.__mockType = typeName
+	return fields
+end
+
+Mock.Vector2 = {
+	new = function(x, y)
+		return datatype("Vector2", { X = x or 0, Y = y or 0 })
+	end,
+}
+Mock.Vector3 = {
+	new = function(x, y, z)
+		return datatype("Vector3", { X = x or 0, Y = y or 0, Z = z or 0 })
+	end,
+}
+Mock.UDim = {
+	new = function(scale, offset)
+		return datatype("UDim", { Scale = scale or 0, Offset = offset or 0 })
+	end,
+}
+Mock.UDim2 = {
+	new = function(xs, xo, ys, yo)
+		return datatype("UDim2", { X = Mock.UDim.new(xs, xo), Y = Mock.UDim.new(ys, yo) })
+	end,
+	fromScale = function(x, y)
+		return Mock.UDim2.new(x, 0, y, 0)
+	end,
+	fromOffset = function(x, y)
+		return Mock.UDim2.new(0, x, 0, y)
+	end,
+}
+Mock.Color3 = {
+	fromRGB = function(r, g, b)
+		return datatype("Color3", { R = r / 255, G = g / 255, B = b / 255 })
+	end,
+	new = function(r, g, b)
+		return datatype("Color3", { R = r, G = g, B = b })
+	end,
+}
+
+function Mock.typeof(value)
+	if instanceSet[value] then
+		return "Instance"
+	end
+	if type(value) == "table" and rawget(value, "__mockType") then
+		return rawget(value, "__mockType")
+	end
+	return typeof(value)
+end
+
+-- Instance ------------------------------------------------------------------------------
+local SUPERCLASSES = {
+	Script = { "BaseScript", "LuaSourceContainer" },
+	LocalScript = { "Script", "BaseScript", "LuaSourceContainer" },
+	ModuleScript = { "LuaSourceContainer" },
+	Part = { "BasePart", "PVInstance" },
+	SpawnLocation = { "Part", "BasePart", "PVInstance" },
+	ScreenGui = { "LayerCollector", "GuiBase2d" },
+	TextLabel = { "GuiObject", "GuiBase2d" },
+	TextButton = { "GuiButton", "GuiObject", "GuiBase2d" },
+	Frame = { "GuiObject", "GuiBase2d" },
+}
+
+local DEFAULTS = {
+	ScreenGui = { Enabled = true, ResetOnSpawn = true, DisplayOrder = 0, IgnoreGuiInset = false },
+	TextLabel = { Text = "Label", Visible = true },
+	Frame = { Visible = true },
+}
+
+-- Propriedades que podem ser nil sem gerar erro.
+local NILLABLE = { OnServerInvoke = true, OnClientInvoke = true, PrimaryPart = true, Adornee = true }
+
+function Mock.isInstance(value)
+	return instanceSet[value] == true
+end
+
+function Mock.newInstance(className, name)
+	local props = { ClassName = className, Name = name or className }
+	for key, value in DEFAULTS[className] or {} do
+		props[key] = value
+	end
+	local children = {}
+	local attributes = {}
+	local parent = nil
+	local destroyed = false
+	local self = {}
+	instanceSet[self] = true
+
+	local childAdded = Mock.newSignal()
+	local childRemoved = Mock.newSignal()
+	local ancestryChanged = Mock.newSignal()
+	local destroying = Mock.newSignal()
+
+	local methods = {}
+
+	function methods:FindFirstChild(childName)
+		for _, child in children do
+			if child.Name == childName then
+				return child
+			end
+		end
+		return nil
+	end
+
+	function methods:FindFirstChildOfClass(childClass)
+		for _, child in children do
+			if child.ClassName == childClass then
+				return child
+			end
+		end
+		return nil
+	end
+
+	function methods:WaitForChild(childName, timeout)
+		local limit = timeout or 5
+		local startedAt = os.clock()
+		repeat
+			local child = self:FindFirstChild(childName)
+			if child then
+				return child
+			end
+			task.wait(0.02)
+		until os.clock() - startedAt >= limit
+		if timeout == nil then
+			error(`Infinite yield (simulado): {self:GetFullName()}:WaitForChild("{childName}")`)
+		end
+		return nil
+	end
+
+	function methods:GetChildren()
+		return table.clone(children)
+	end
+
+	function methods:GetDescendants()
+		local result = {}
+		for _, child in children do
+			table.insert(result, child)
+			for _, descendant in child:GetDescendants() do
+				table.insert(result, descendant)
+			end
+		end
+		return result
+	end
+
+	function methods:IsA(target)
+		if target == "Instance" or target == className then
+			return true
+		end
+		return table.find(SUPERCLASSES[className] or {}, target) ~= nil
+	end
+
+	function methods:IsDescendantOf(ancestor)
+		local current = parent
+		while current do
+			if current == ancestor then
+				return true
+			end
+			current = current.Parent
+		end
+		return false
+	end
+
+	function methods:GetFullName()
+		local parts = { props.Name }
+		local current = parent
+		while current and current.ClassName ~= "DataModel" do
+			table.insert(parts, 1, current.Name)
+			current = current.Parent
+		end
+		return table.concat(parts, ".")
+	end
+
+	function methods:SetAttribute(key, value)
+		attributes[key] = value
+	end
+
+	function methods:GetAttribute(key)
+		return attributes[key]
+	end
+
+	function methods:GetAttributes()
+		return table.clone(attributes)
+	end
+
+	function methods:ClearAllChildren()
+		for _, child in table.clone(children) do
+			child:Destroy()
+		end
+	end
+
+	function methods:Destroy()
+		if destroyed then
+			return
+		end
+		destroying:Fire()
+		for _, child in table.clone(children) do
+			child:Destroy()
+		end
+		self.Parent = nil
+		destroyed = true
+	end
+
+	local function setParent(newParent)
+		if destroyed then
+			error(`The Parent property of {props.Name} is locked`)
+		end
+		if newParent ~= nil and not instanceSet[newParent] then
+			error("Parent precisa ser uma Instance")
+		end
+		if parent then
+			parent.__removeChild(self)
+		end
+		parent = newParent
+		if newParent then
+			newParent.__addChild(self)
+		end
+		ancestryChanged:Fire(self, newParent)
+	end
+
+	local internals = {
+		__addChild = function(child)
+			table.insert(children, child)
+			childAdded:Fire(child)
+		end,
+		__removeChild = function(child)
+			local index = table.find(children, child)
+			if index then
+				table.remove(children, index)
+				childRemoved:Fire(child)
+			end
+		end,
+		ChildAdded = childAdded,
+		ChildRemoved = childRemoved,
+		AncestryChanged = ancestryChanged,
+		Destroying = destroying,
+	}
+
+	setmetatable(self, {
+		__index = function(_, key)
+			if key == "Parent" then
+				return parent
+			end
+			local value = methods[key] or internals[key] or props[key]
+			if value ~= nil then
+				return value
+			end
+			local child = methods.FindFirstChild(self, key)
+			if child then
+				return child
+			end
+			if NILLABLE[key] then
+				return nil
+			end
+			error(`{key} is not a valid member of {className} "{props.Name}"`, 2)
+		end,
+		__newindex = function(_, key, value)
+			if key == "Parent" then
+				setParent(value)
+			else
+				props[key] = value
+			end
+		end,
+		__tostring = function()
+			return props.Name
+		end,
+	})
+
+	return self
+end
+
+return Mock
