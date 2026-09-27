@@ -6,7 +6,8 @@
 
 local AdminConfig = {
 	ADMIN_USER_IDS = {
-		-- 123456789, -- (exemplo) coloque seus UserIds aqui, separados por vírgula
+		2381958322, -- dono do jogo
+		-- adicione outros UserIds aqui, separados por vírgula
 	} :: { number },
 
 	-- true: dentro do Roblox Studio, qualquer jogador de teste é admin.
