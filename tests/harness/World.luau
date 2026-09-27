@@ -126,6 +126,7 @@ function World:makeEnv(scriptInstance)
 		Vector3 = Mock.Vector3,
 		CFrame = Mock.CFrame,
 		TweenInfo = Mock.TweenInfo,
+		Random = Mock.Random,
 		UDim = Mock.UDim,
 		UDim2 = Mock.UDim2,
 		Color3 = Mock.Color3,
@@ -185,6 +186,7 @@ function World:runScript(scriptInstance)
 		local ok, err = xpcall(chunk, debug.traceback)
 		if not ok then
 			self:log("error", err)
+			table.insert(Mock.uncaughtErrors, `[{self.Name}] {err}`)
 		end
 	end)
 end
@@ -292,6 +294,9 @@ function World.new(kind, name, options)
 			table.insert(list, descendant)
 		end
 		for _, instance in list do
+			if instance == collection then
+				continue
+			end
 			for _, tag in instance:GetTags() do
 				callback(instance, tag)
 			end
@@ -309,7 +314,7 @@ function World.new(kind, name, options)
 	collection.GetTagged = function(_, tag)
 		local list = {}
 		for _, descendant in game:GetDescendants() do
-			if descendant:HasTag(tag) then
+			if descendant ~= collection and descendant:HasTag(tag) then
 				table.insert(list, descendant)
 			end
 		end

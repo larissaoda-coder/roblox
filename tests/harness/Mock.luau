@@ -7,6 +7,16 @@ local task = require("@lune/task")
 
 local Mock = {}
 
+-- Erros que aconteceram dentro de eventos (threads separadas). O Test.run reprova o teste se houver algum.
+Mock.uncaughtErrors = {}
+
+local function safeCall(callback, ...)
+	local ok, err = xpcall(callback, debug.traceback, ...)
+	if not ok then
+		table.insert(Mock.uncaughtErrors, tostring(err))
+	end
+end
+
 local instanceSet = setmetatable({}, { __mode = "k" })
 
 -- Signal (RBXScriptSignal) -----------------------------------------------------------
@@ -40,7 +50,7 @@ function Mock.newSignal()
 	function signal:Fire(...)
 		for _, connection in table.clone(listeners) do
 			if connection.Connected then
-				task.spawn(connection.callback, ...)
+				task.spawn(safeCall, connection.callback, ...)
 			end
 		end
 	end
@@ -55,6 +65,29 @@ function Mock.newSignal()
 
 	return signal
 end
+
+-- Random (determinístico por seed, algoritmo LCG) -----------------------------------------
+Mock.Random = {
+	new = function(seed)
+		local state = math.floor(seed or os.clock() * 1000) % 2147483647
+		if state <= 0 then
+			state += 2147483646
+		end
+		local random = {}
+		local function nextFloat()
+			state = (state * 48271) % 2147483647
+			return state / 2147483647
+		end
+		function random:NextNumber(min, max)
+			min, max = min or 0, max or 1
+			return min + nextFloat() * (max - min)
+		end
+		function random:NextInteger(min, max)
+			return min + math.floor(nextFloat() * (max - min + 1))
+		end
+		return random
+	end,
+}
 
 -- Enum ------------------------------------------------------------------------------
 local enumCache = {}
@@ -541,7 +574,10 @@ function Mock.newInstance(className, name)
 			if key == "Parent" then
 				return parent
 			end
-			local value = methods[key] or internals[key] or props[key]
+			local value = props[key]
+			if value == nil then
+				value = methods[key] or internals[key]
+			end
 			if value ~= nil then
 				return value
 			end

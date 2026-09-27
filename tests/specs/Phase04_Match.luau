@@ -20,7 +20,7 @@ local function fastMatch(minutes, secondsPerMinute)
 			"REAL_SECONDS_PER_GAME_MINUTE = 15",
 			`REAL_SECONDS_PER_GAME_MINUTE = {secondsPerMinute or 0.1}`
 		)
-		source = string.gsub(source, "BRIEFING_SECONDS = 10", "BRIEFING_SECONDS = 0.2")
+		source = string.gsub(source, "BRIEFING_SECONDS = 10", "BRIEFING_SECONDS = 0.6")
 		source = string.gsub(source, "RESULTS_SECONDS = 10", "RESULTS_SECONDS = 0.3")
 		return source
 	end
@@ -122,7 +122,9 @@ test("Fase4/TESTE 1: turno completo, do lobby ao lobby", function(context)
 	expect(distance(root.Position, spawnPoint.Position) < 5, "personagem levado ao spawn do mapa")
 	expect(hud(client).Enabled, "HUD visível")
 	expect(not client.LocalPlayer.PlayerGui.LobbyUI.Enabled, "lobby escondido")
-	expectEqual(hud(client).Banner.Text, "SEU TURNO COMEÇOU", "aviso de início")
+	Test.waitFor(function()
+		return hud(client).Banner.Text == "SEU TURNO COMEÇOU"
+	end, 1, "aviso de início")
 	expectEqual(hud(client).Top.Clock.Text, "04:00 AM", "relógio no início")
 
 	-- Turno: relógio anda.

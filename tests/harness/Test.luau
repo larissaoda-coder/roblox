@@ -3,6 +3,8 @@
 
 local task = require("@lune/task")
 
+local Mock = require("./Mock")
+
 local Test = {}
 
 local registered = {}
@@ -85,7 +87,12 @@ function Test.run(filter)
 	for _, entry in registered do
 		if filter == nil or string.find(entry.name, filter, 1, true) then
 			local context = { sessions = {} }
+			table.clear(Mock.uncaughtErrors)
 			local ok, err = xpcall(entry.fn, debug.traceback, context)
+			if ok and #Mock.uncaughtErrors > 0 then
+				ok = false
+				err = "erro não tratado dentro de um evento:\n" .. Mock.uncaughtErrors[1]
+			end
 			for _, session in context.sessions do
 				session:stop()
 			end

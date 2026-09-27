@@ -76,6 +76,24 @@ local RemoteSchema: { [string]: RemoteSpec } = {
 		Args = {},
 	},
 
+	-- Tarefas ---------------------------------------------------------------
+	RequestTasks = {
+		Kind = "Function",
+		Direction = "ClientToServer",
+		RateLimit = { Max = 3, Per = 5 },
+		Args = {},
+	},
+	-- ({ tarefas }) lista das tarefas liberadas e seu progresso.
+	TasksChanged = {
+		Kind = "Event",
+		Direction = "ServerToClient",
+	},
+	-- (taskId, isNew) tarefa concluída (isNew = false) ou nova tarefa liberada (isNew = true).
+	TaskNotice = {
+		Kind = "Event",
+		Direction = "ServerToClient",
+	},
+
 	-- Notificações -----------------------------------------------------------
 	-- (textKey: string, ...args) mensagem curta na tela do jogador.
 	Notify = {

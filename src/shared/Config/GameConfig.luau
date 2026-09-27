@@ -4,7 +4,7 @@
 
 local GameConfig = {
 	GAME_NAME = "NIGHT SHIFT: 4AM",
-	GAME_VERSION = "0.5.0",
+	GAME_VERSION = "0.6.0",
 
 	-- true: mostra logs de debug e o painel de debug (somente para admins).
 	-- Mude para false antes de publicar.

@@ -227,6 +227,14 @@ function InteractionService:SetPromptKey(target: Instance, promptKey: string)
 	end
 end
 
+function InteractionService:SetHoldDuration(target: Instance, seconds: number)
+	target:SetAttribute("HoldDuration", seconds)
+	local prompt = prompts[target]
+	if prompt then
+		prompt.HoldDuration = seconds
+	end
+end
+
 function InteractionService:GetPrompt(target: Instance): ProximityPrompt?
 	return prompts[target]
 end
