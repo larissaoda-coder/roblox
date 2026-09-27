@@ -14,7 +14,13 @@ local Shared = ReplicatedStorage.Shared
 local MapDefinitions = require(Shared.Definitions.MapDefinitions)
 local Log = require(Shared.Modules.Log)
 
-local PlaceholderMapBuilder = require(script.Parent.Parent.World.PlaceholderMapBuilder)
+local World = script.Parent.Parent.World
+local PlaceholderMapBuilder = require(World.PlaceholderMapBuilder)
+
+-- Mapas gerados por código enquanto não existe uma versão feita à mão em ServerStorage > Maps.
+local BUILDERS: { [string]: { build: (mapId: string) -> Model } } = {
+	GasStation = require(World.GasStationBuilder),
+}
 
 local ACTIVE_MAP_NAME = "ActiveMap"
 local SPAWN_HEIGHT_OFFSET = 3
@@ -30,6 +36,11 @@ local function getSource(mapId: string): Model
 	local source = maps and maps:FindFirstChild(mapId)
 	if source and source:IsA("Model") then
 		return source:Clone()
+	end
+	local builder = BUILDERS[mapId]
+	if builder then
+		log:Debug("Gerando o mapa %s por código.", mapId)
+		return builder.build(mapId)
 	end
 	log:Warn("ServerStorage > Maps > %s não existe. Usando área de teste temporária.", mapId)
 	return PlaceholderMapBuilder.build(mapId)

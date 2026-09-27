@@ -127,6 +127,7 @@ function World:makeEnv(scriptInstance)
 		CFrame = Mock.CFrame,
 		TweenInfo = Mock.TweenInfo,
 		Random = Mock.Random,
+		Font = Mock.Font,
 		UDim = Mock.UDim,
 		UDim2 = Mock.UDim2,
 		Color3 = Mock.Color3,

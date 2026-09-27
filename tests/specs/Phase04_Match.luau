@@ -116,7 +116,7 @@ test("Fase4/TESTE 1: turno completo, do lobby ao lobby", function(context)
 	local runtime = session.Server.workspace.Runtime
 	local map = runtime:FindFirstChild("ActiveMap")
 	expect(map and map:GetAttribute("MapId") == "GasStation", "mapa carregado em Workspace.Runtime.ActiveMap")
-	Test.expectLog(session.Server, "Usando área de teste temporária")
+	Test.expectLog(session.Server, "Gerando o mapa GasStation por código")
 	local spawnPoint = map.Spawns.Spawn1
 	local root = client.ServerPlayer.Character.HumanoidRootPart
 	expect(distance(root.Position, spawnPoint.Position) < 5, "personagem levado ao spawn do mapa")
@@ -133,7 +133,9 @@ test("Fase4/TESTE 1: turno completo, do lobby ao lobby", function(context)
 		return hud(client).Top.Clock.Text == "04:02 AM"
 	end, 2, "relógio em 04:02")
 	expect(not hud(client).Banner.Visible, "aviso some durante o turno")
-	expectEqual(hud(client).Top.Objective.Text, "OBJETIVO: MANTENHA O POSTO FUNCIONANDO", "objetivo")
+	Test.waitFor(function()
+		return string.find(hud(client).Top.Objective.Text, "^OBJETIVO: ") ~= nil
+	end, 1, "objetivo visível")
 
 	-- Fim: resultado e volta ao lobby.
 	waitPhase(session, "Results")

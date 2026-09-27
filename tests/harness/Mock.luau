@@ -165,6 +165,17 @@ Mock.CFrame = {
 	Angles = function(_, yaw, _)
 		return newCFrame(newVector3(0, 0, 0), yaw or 0)
 	end,
+	lookAt = function(position, _target)
+		return newCFrame(position, 0)
+	end,
+}
+Mock.Font = {
+	fromEnum = function(enumItem)
+		return datatype("Font", { Family = enumItem.Name })
+	end,
+	new = function(family, weight)
+		return datatype("Font", { Family = family, Weight = weight })
+	end,
 }
 Mock.TweenInfo = {
 	new = function(...)
@@ -594,6 +605,16 @@ function Mock.newInstance(className, name)
 			if key == "Parent" then
 				setParent(value)
 			else
+				-- Position e CFrame andam juntos, como no Roblox.
+				if key == "CFrame" and type(value) == "table" and value.Position then
+					props.Position = value.Position
+				elseif
+					key == "Position"
+					and type(value) == "table"
+					and rawget(value, "__mockType") == "Vector3"
+				then
+					props.CFrame = Mock.CFrame.new(value)
+				end
 				local changed = props[key] ~= value
 				props[key] = value
 				if changed and propertySignals[key] then

@@ -26,6 +26,7 @@ echo "== Testes (Lune)"
 
 echo "== Place"
 mkdir -p build
+"$(bin lune)" run scripts/export-maps.luau
 "$(bin rojo)" build place.project.json -o build/NightShift.rbxlx
 for name in Shared Server Client; do
 	"$(bin rojo)" build "projects/$name.project.json" -o "build/$name.rbxm"

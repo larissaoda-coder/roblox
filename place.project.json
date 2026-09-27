@@ -42,6 +42,14 @@
         "EnvironmentSpecularScale": 0.2,
         "GlobalShadows": true
       }
+    },
+    "ServerStorage": {
+      "Maps": {
+        "$className": "Folder",
+        "GasStation": {
+          "$path": "build/GasStation.rbxm"
+        }
+      }
     }
   }
 }
