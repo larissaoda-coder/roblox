@@ -37,7 +37,25 @@ local function currentCameraId(): string?
 	return if camera then camera.Id else nil
 end
 
+-- Clientes com NoCameraRecord não aparecem nas câmeras (só enquanto o monitor está aberto).
+local function refreshNoRecord()
+	local runtime = workspace:FindFirstChild("Runtime")
+	if not runtime then
+		return
+	end
+	for _, model in runtime:GetDescendants() do
+		if model:IsA("Model") and model:GetAttribute("NoCameraRecord") == true then
+			for _, part in model:GetDescendants() do
+				if part:IsA("BasePart") then
+					part.LocalTransparencyModifier = if isOpen then 1 else 0
+				end
+			end
+		end
+	end
+end
+
 local function refreshAnomalies()
+	refreshNoRecord()
 	local cameraId = currentCameraId()
 	local now = os.clock()
 	for position = #anomalies, 1, -1 do

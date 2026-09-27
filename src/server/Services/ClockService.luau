@@ -43,7 +43,11 @@ function ClockService:Run(state: Instance, shouldStop: () -> boolean): boolean
 
 	local completed = false
 	while not shouldStop() do
-		task.wait(MatchConfig.REAL_SECONDS_PER_GAME_MINUTE)
+		-- Espera o minuto em pedaços curtos para reagir rápido se a partida for encerrada.
+		local deadline = os.clock() + MatchConfig.REAL_SECONDS_PER_GAME_MINUTE
+		while os.clock() < deadline and not shouldStop() do
+			task.wait(math.min(0.25, deadline - os.clock()))
+		end
 		if shouldStop() then
 			break
 		end

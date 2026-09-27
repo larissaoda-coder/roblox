@@ -105,7 +105,8 @@ test("Fase8/Unit: 15 eventos definidos, com módulos e raridades", function(cont
 	for _, definition in all do
 		rarities[definition.Rarity] = true
 		expect(
-			session.Server.game.ServerScriptService.Server.Events:FindFirstChild(definition.Module),
+			definition.DiscoveryOnly
+				or session.Server.game.ServerScriptService.Server.Events:FindFirstChild(definition.Module),
 			`módulo {definition.Module}`
 		)
 	end

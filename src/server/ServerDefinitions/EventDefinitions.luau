@@ -31,6 +31,7 @@ export type EventDefinition = {
 	SpecialMinute: number?,
 	SpecialChance: number?,
 	Secret: boolean,
+	DiscoveryOnly: boolean, -- não é sorteado; só é "descoberto" por outro sistema (diálogo, câmera…)
 	Tags: { string },
 }
 
@@ -56,6 +57,7 @@ type Partial = {
 	SpecialMinute: number?,
 	SpecialChance: number?,
 	Secret: boolean?,
+	DiscoveryOnly: boolean?,
 	Tags: { string }?,
 }
 
@@ -74,6 +76,7 @@ local function event(data: Partial): EventDefinition
 		SpecialMinute = data.SpecialMinute,
 		SpecialChance = data.SpecialChance,
 		Secret = data.Secret == true,
+		DiscoveryOnly = data.DiscoveryOnly == true,
 		Tags = data.Tags or {},
 	}
 end
@@ -190,6 +193,26 @@ local EVENTS: { EventDefinition } = {
 		CameraOnly = true,
 		Tags = { "Cameras" },
 	}),
+
+	-- Clientes (NPCs) estranhos
+	event({
+		Id = "OddCustomer",
+		Rarity = "UNCOMMON",
+		Intensity = 2,
+		MinMinute = 15,
+		Cooldown = 20,
+		MaxPerShift = 1,
+		Tags = { "Customer" },
+	}),
+	event({
+		Id = "CustomerNoRecord",
+		Rarity = "VERY_RARE",
+		Intensity = 3,
+		MinMinute = 25,
+		MaxPerShift = 1,
+		Tags = { "Customer", "Cameras" },
+	}),
+	event({ Id = "OldManStory", Rarity = "RARE", Intensity = 1, DiscoveryOnly = true, Tags = { "Lore" } }),
 
 	-- Horários especiais
 	event({

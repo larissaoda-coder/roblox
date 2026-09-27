@@ -37,6 +37,7 @@ local DataConfig = {
 		},
 
 		Discoveries = {} :: { [string]: number }, -- EventId → os.time() da primeira descoberta
+		Documents = {} :: { [string]: number }, -- DocumentId → os.time() da primeira leitura
 		Inventory = {
 			Owned = {} :: { [string]: boolean },
 			Equipped = {} :: { [string]: string },

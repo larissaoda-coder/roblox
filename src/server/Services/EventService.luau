@@ -22,11 +22,13 @@ local EventDefinitions = require(Server.ServerDefinitions.EventDefinitions)
 local AudioService = require(script.Parent.AudioService)
 local ClockService = require(script.Parent.ClockService)
 local DataService = require(script.Parent.DataService)
+local DialogueService = require(script.Parent.DialogueService)
 local DoorService = require(script.Parent.DoorService)
 local InteractionService = require(script.Parent.InteractionService)
 local LightingService = require(script.Parent.LightingService)
 local MapService = require(script.Parent.MapService)
 local MatchService = require(script.Parent.MatchService)
+local NPCService = require(script.Parent.NPCService)
 local SecurityCameraService = require(script.Parent.SecurityCameraService)
 local TaskService = require(script.Parent.TaskService)
 local TensionService = require(script.Parent.TensionService)
@@ -97,6 +99,7 @@ local SERVICES = {
 	Tension = TensionService,
 	Events = EventService,
 	Interaction = InteractionService,
+	NPCs = NPCService,
 }
 
 local function matchPlayers(): { Player }
@@ -232,6 +235,9 @@ end
 
 local function run(definition: EventDefinition, ctx: EventContext): boolean
 	local module = modules[definition.Module]
+	if not module then
+		return false
+	end
 	if definition.Perceptual and not ctx.Target then
 		return false
 	end
@@ -308,6 +314,16 @@ function EventService:Trigger(eventId: string): boolean
 	end
 	local ctx = buildContext(definition)
 	return ctx ~= nil and run(definition, ctx)
+end
+
+-- Registra que o jogador presenciou um evento (usado por diálogos, câmeras etc.).
+function EventService:Discover(player: Player, eventId: string): boolean
+	local definition = EventDefinitions.get(eventId)
+	if not definition or not MatchService:IsPlayerInMatch(player) then
+		return false
+	end
+	witness(definition, { player })
+	return true
 end
 
 function EventService:GetShiftDiscoveries(player: Player): { string }
@@ -405,6 +421,9 @@ end
 function EventService:Init()
 	local eventsFolder = Server:FindFirstChild("Events")
 	for _, definition in EventDefinitions.getAll() do
+		if definition.DiscoveryOnly then
+			continue
+		end
 		local moduleScript = eventsFolder and eventsFolder:FindFirstChild(definition.Module)
 		assert(
 			moduleScript and moduleScript:IsA("ModuleScript"),
@@ -422,6 +441,20 @@ function EventService:Init()
 end
 
 function EventService:Start()
+	-- Diálogos podem revelar eventos ("Discover:<EventId>").
+	DialogueService.ActionTriggered:Connect(function(player: Player, action: string)
+		local eventId = string.match(action, "^Discover:(.+)$")
+		if eventId then
+			EventService:Discover(player, eventId)
+		end
+	end)
+	-- Olhar as câmeras enquanto o cliente sem registro está no caixa: a câmera mostra o caixa vazio.
+	SecurityCameraService.ViewChanged:Connect(function(player: Player, cameraId: string)
+		if cameraId == "CAM02" and NPCService:HasActive("NoRecord") then
+			EventService:Discover(player, "CustomerNoRecord")
+		end
+	end)
+
 	MatchService.MatchStarted:Connect(function()
 		matchToken += 1
 		rng = Rng.new()

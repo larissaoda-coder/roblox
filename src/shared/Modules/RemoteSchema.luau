@@ -155,6 +155,24 @@ local RemoteSchema: { [string]: RemoteSpec } = {
 		Direction = "ServerToClient",
 	},
 
+	-- Diálogos e documentos -----------------------------------------------------
+	-- ({ SpeakerKey, TextKey, Choices = { TextKey } } | nil) nó atual; nil = conversa encerrada.
+	DialogueNode = {
+		Kind = "Event",
+		Direction = "ServerToClient",
+	},
+	DialogueChoice = {
+		Kind = "Event",
+		Direction = "ClientToServer",
+		RateLimit = { Max = 6, Per = 2 },
+		Args = { T.integer(1, 6) },
+	},
+	-- (documentId) abre o documento na tela.
+	ShowDocument = {
+		Kind = "Event",
+		Direction = "ServerToClient",
+	},
+
 	-- Notificações -----------------------------------------------------------
 	-- (textKey: string, ...args) mensagem curta na tela do jogador.
 	Notify = {
