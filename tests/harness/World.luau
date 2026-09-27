@@ -425,6 +425,69 @@ function World.new(kind, name, options)
 		return store
 	end
 
+	-- Rankings (OrderedDataStore) simulados.
+	self.OrderedStores = {}
+	dataStoreService.GetOrderedDataStore = function(_, name)
+		if options.dataStoreUnavailable then
+			error("DataStore indisponível (simulado)")
+		end
+		self.OrderedStores[name] = self.OrderedStores[name] or {}
+		local values = self.OrderedStores[name]
+		local store = {}
+		function store:SetAsync(key, value)
+			values[key] = value
+		end
+		function store:GetSortedAsync(ascending, pageSize)
+			local list = {}
+			for key, value in values do
+				table.insert(list, { key = key, value = value })
+			end
+			table.sort(list, function(a, b)
+				if ascending then
+					return a.value < b.value
+				end
+				return a.value > b.value
+			end)
+			local page = {}
+			for index = 1, math.min(pageSize, #list) do
+				page[index] = list[index]
+			end
+			return {
+				GetCurrentPage = function()
+					return page
+				end,
+			}
+		end
+		return store
+	end
+
+	game.PrivateServerId = ""
+	game.PrivateServerOwnerId = 0
+
+	-- Badges e compras simulados.
+	local badgeService = service("BadgeService")
+	self.AwardedBadges = {}
+	badgeService.AwardBadge = function(_, userId, badgeId)
+		table.insert(self.AwardedBadges, `{userId}:{badgeId}`)
+		return true
+	end
+	local marketplace = service("MarketplaceService")
+	self.OwnedPasses = options.ownedPasses or {}
+	self.Prompts = {}
+	marketplace.UserOwnsGamePassAsync = function(_, userId, passId)
+		return self.OwnedPasses[`{userId}:{passId}`] == true
+	end
+	marketplace.PromptGamePassPurchaseFinished = Mock.newSignal()
+	marketplace.PromptProductPurchase = function(_, player, productId)
+		table.insert(self.Prompts, `product:{productId}`)
+	end
+	marketplace.PromptGamePassPurchase = function(_, player, passId)
+		table.insert(self.Prompts, `pass:{passId}`)
+	end
+	marketplace.ProcessReceipt = nil
+	self.Marketplace = marketplace
+	service("TextChatService")
+
 	-- Pathfinding simulado: nunca encontra caminho (quem usa deve ter um plano B).
 	local pathfinding = service("PathfindingService")
 	pathfinding.CreatePath = function()
@@ -439,6 +502,9 @@ function World.new(kind, name, options)
 	local players = service("Players")
 	players.PlayerAdded = Mock.newSignal()
 	players.PlayerRemoving = Mock.newSignal()
+	players.GetNameFromUserIdAsync = function(_, userId)
+		return `User{userId}`
+	end
 	players.GetPlayerByUserId = function(_, userId)
 		for _, child in players:GetChildren() do
 			if child.ClassName == "Player" and child.UserId == userId then

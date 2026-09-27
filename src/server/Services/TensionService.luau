@@ -115,7 +115,9 @@ local function tick(player: Player)
 		delta -= TensionConfig.DECAY_WITH_TEAM
 	end
 	if dark then
-		delta += TensionConfig.GAIN_DARK
+		-- A lanterna ajuda, mas não resolve: o escuro ainda pesa um pouco.
+		local flashlight = player:GetAttribute("FlashlightOn") == true
+		delta += TensionConfig.GAIN_DARK * (if flashlight then 0.4 else 1)
 	end
 	if zone == "Forest" then
 		delta += TensionConfig.GAIN_FOREST

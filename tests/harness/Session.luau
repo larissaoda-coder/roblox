@@ -60,6 +60,7 @@ function Session.new(options)
 		dataStores = options.dataStores,
 		dataStoreUnavailable = options.dataStoreUnavailable,
 		jobId = options.jobId,
+		ownedPasses = options.ownedPasses,
 		onCreate = function(_, instance)
 			self:_setupServerRemote(instance)
 		end,
@@ -220,6 +221,12 @@ function Session:addClient(name, userId, clientOptions)
 		local root = Mock.newInstance("Part", "HumanoidRootPart")
 		root.Position = Mock.Vector3.new(0, 3, 14) -- spawn do lobby
 		root.Parent = character
+		local head = Mock.newInstance("Part", "Head")
+		head.Position = root.Position + Mock.Vector3.new(0, 1.5, 0)
+		head.Parent = character
+		local torso = Mock.newInstance("Part", "UpperTorso")
+		torso.Position = root.Position
+		torso.Parent = character
 		Mock.newInstance("Humanoid", "Humanoid").Parent = character
 		character.Parent = self.Server.workspace
 		serverPlayer.Character = character

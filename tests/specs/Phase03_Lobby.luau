@@ -98,7 +98,7 @@ test("Fase3/TESTE 1: jogador abre JOGAR, cria turno, fica pronto e inicia", func
 	local gui = client.LocalPlayer.PlayerGui.LobbyUI
 	expect(gui.Enabled, "lobby visível")
 	expectEqual(find(client, "Title").Text, "NIGHT SHIFT: 4AM", "título")
-	expect(find(client, "Menu_Shop"):GetAttribute("Disabled") == true, "LOJA em breve")
+	expect(find(client, "Menu_Shop"):GetAttribute("Disabled") ~= true, "LOJA disponível")
 
 	click(client, "Menu_Play")
 	expect(find(client, "Modal").Visible, "janela aberta")

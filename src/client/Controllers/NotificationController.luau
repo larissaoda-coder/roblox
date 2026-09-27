@@ -37,7 +37,15 @@ function NotificationController:Show(text: string, duration: number?)
 end
 
 function NotificationController:ShowKey(key: string, ...: any)
-	self:Show(Strings.get(key, ...))
+	-- Argumentos que também são chaves de texto são traduzidos (ex.: nome de uma conquista).
+	local args = table.pack(...)
+	for index = 1, args.n do
+		local value = args[index]
+		if type(value) == "string" and Strings.has(value) then
+			args[index] = Strings.get(value)
+		end
+	end
+	self:Show(Strings.get(key, table.unpack(args, 1, args.n)))
 end
 
 function NotificationController:Init() end

@@ -187,6 +187,38 @@ local RemoteSchema: { [string]: RemoteSpec } = {
 		Direction = "ServerToClient",
 	},
 
+	-- Inventário, loja e lanterna ---------------------------------------------
+	GetInventory = {
+		Kind = "Function",
+		Direction = "ClientToServer",
+		RateLimit = { Max = 4, Per = 4 },
+		Args = {},
+	},
+	EquipItem = {
+		Kind = "Function",
+		Direction = "ClientToServer",
+		RateLimit = { Max = 6, Per = 3 },
+		Args = { T.string(48) },
+	},
+	PurchaseItem = {
+		Kind = "Function",
+		Direction = "ClientToServer",
+		RateLimit = { Max = 3, Per = 3 },
+		Args = { T.string(48) },
+	},
+	SetFlashlight = {
+		Kind = "Event",
+		Direction = "ClientToServer",
+		RateLimit = { Max = 6, Per = 2 },
+		Args = { T.boolean() },
+	},
+	GetLeaderboard = {
+		Kind = "Function",
+		Direction = "ClientToServer",
+		RateLimit = { Max = 4, Per = 4 },
+		Args = { T.string(32) },
+	},
+
 	-- Notificações -----------------------------------------------------------
 	-- (textKey: string, ...args) mensagem curta na tela do jogador.
 	Notify = {

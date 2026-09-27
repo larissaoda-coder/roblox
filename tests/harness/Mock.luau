@@ -305,6 +305,8 @@ local NILLABLE = {
 	SelectedObject = true,
 	Character = true,
 	CameraSubject = true,
+	ProcessReceipt = true,
+	OnIncomingMessage = true,
 }
 
 -- Ouvintes globais (usados pelo CollectionService simulado de cada mundo).

@@ -11,7 +11,15 @@ local Strings = require(Shared.Definitions.Strings)
 local Components = require(script.Parent.Parent.Components)
 local Theme = require(script.Parent.Parent.Theme)
 
-export type PanelName = "Play" | "Party" | "Profile" | "Credits"
+export type PanelName =
+	"Play"
+	| "Party"
+	| "Profile"
+	| "Credits"
+	| "Shop"
+	| "Inventory"
+	| "Leaderboard"
+	| "Settings"
 
 export type Callbacks = {
 	OnCreate: (mapId: string) -> (),
@@ -20,6 +28,8 @@ export type Callbacks = {
 	OnSetReady: (ready: boolean) -> (),
 	OnStart: () -> (),
 	OnPanelOpened: (panel: PanelName) -> (),
+	-- Painéis desenhados fora desta tela (Loja, Inventário, Ranking, Configurações).
+	RenderExternal: (panel: PanelName, content: Frame) -> (),
 }
 
 export type PartyMember = { UserId: number, Name: string, Ready: boolean }
@@ -47,6 +57,7 @@ export type LobbyScreen = {
 	SetTouchMode: (self: LobbyScreen, isTouch: boolean) -> (),
 	SetViewportSize: (self: LobbyScreen, viewportSize: Vector2) -> (),
 	GetFirstSelectable: (self: LobbyScreen) -> GuiObject?,
+	Refresh: (self: LobbyScreen) -> (),
 	Destroy: (self: LobbyScreen) -> (),
 }
 
@@ -55,10 +66,10 @@ type MenuEntry = { Id: string, TextKey: string, Panel: PanelName? }
 local MENU: { MenuEntry } = {
 	{ Id = "Play", TextKey = "MENU_PLAY", Panel = "Play" },
 	{ Id = "Profile", TextKey = "MENU_PROFILE", Panel = "Profile" },
-	{ Id = "Shop", TextKey = "MENU_SHOP" },
-	{ Id = "Inventory", TextKey = "MENU_INVENTORY" },
-	{ Id = "Leaderboard", TextKey = "MENU_LEADERBOARD" },
-	{ Id = "Settings", TextKey = "MENU_SETTINGS" },
+	{ Id = "Shop", TextKey = "MENU_SHOP", Panel = "Shop" },
+	{ Id = "Inventory", TextKey = "MENU_INVENTORY", Panel = "Inventory" },
+	{ Id = "Leaderboard", TextKey = "MENU_LEADERBOARD", Panel = "Leaderboard" },
+	{ Id = "Settings", TextKey = "MENU_SETTINGS", Panel = "Settings" },
 	{ Id = "Credits", TextKey = "MENU_CREDITS", Panel = "Credits" },
 }
 
@@ -67,6 +78,10 @@ local PANEL_TITLES: { [PanelName]: string } = {
 	Party = "PARTY_TITLE",
 	Profile = "PROFILE_TITLE",
 	Credits = "CREDITS_TITLE",
+	Shop = "SHOP_TITLE",
+	Inventory = "INVENTORY_TITLE",
+	Leaderboard = "LEADERBOARD_TITLE",
+	Settings = "SETTINGS_TITLE",
 }
 
 local STAT_ORDER = {
@@ -552,6 +567,8 @@ function LobbyScreen.new(parent: Instance, userId: number, callbacks: Callbacks)
 			renderProfile()
 		elseif panel == "Credits" then
 			renderCredits()
+		else
+			callbacks.RenderExternal(panel, content)
 		end
 	end
 
@@ -664,6 +681,12 @@ function LobbyScreen.new(parent: Instance, userId: number, callbacks: Callbacks)
 			end
 		end
 		return nil
+	end
+
+	function screen:Refresh()
+		if openPanel then
+			render()
+		end
 	end
 
 	function screen:Destroy()
