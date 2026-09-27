@@ -125,6 +125,7 @@ function World:makeEnv(scriptInstance)
 		Vector2 = Mock.Vector2,
 		Vector3 = Mock.Vector3,
 		CFrame = Mock.CFrame,
+		TweenInfo = Mock.TweenInfo,
 		UDim = Mock.UDim,
 		UDim2 = Mock.UDim2,
 		Color3 = Mock.Color3,
@@ -274,6 +275,103 @@ function World.new(kind, name, options)
 	runService.Heartbeat = Mock.newSignal()
 	runService.Stepped = Mock.newSignal()
 	self.RunService = runService
+
+	-- CollectionService simulado ------------------------------------------------------
+	local collection = service("CollectionService")
+	local addedSignals, removedSignals = {}, {}
+	local function signalFor(map, tag)
+		map[tag] = map[tag] or Mock.newSignal()
+		return map[tag]
+	end
+	local function inGame(instance)
+		return instance == game or (instance ~= nil and instance:IsDescendantOf(game))
+	end
+	local function forTagged(root, callback)
+		local list = { root }
+		for _, descendant in root:GetDescendants() do
+			table.insert(list, descendant)
+		end
+		for _, instance in list do
+			for _, tag in instance:GetTags() do
+				callback(instance, tag)
+			end
+		end
+	end
+	collection.AddTag = function(_, instance, tag)
+		instance:AddTag(tag)
+	end
+	collection.RemoveTag = function(_, instance, tag)
+		instance:RemoveTag(tag)
+	end
+	collection.HasTag = function(_, instance, tag)
+		return instance:HasTag(tag)
+	end
+	collection.GetTagged = function(_, tag)
+		local list = {}
+		for _, descendant in game:GetDescendants() do
+			if descendant:HasTag(tag) then
+				table.insert(list, descendant)
+			end
+		end
+		return list
+	end
+	collection.GetInstanceAddedSignal = function(_, tag)
+		return signalFor(addedSignals, tag)
+	end
+	collection.GetInstanceRemovedSignal = function(_, tag)
+		return signalFor(removedSignals, tag)
+	end
+	self.collectionListener = {
+		parentChanged = function(instance, oldParent, newParent)
+			if not self.Running then
+				return
+			end
+			local wasIn, isIn = inGame(oldParent), inGame(newParent)
+			if isIn and not wasIn then
+				forTagged(instance, function(tagged, tag)
+					signalFor(addedSignals, tag):Fire(tagged)
+				end)
+			elseif wasIn and not isIn then
+				forTagged(instance, function(tagged, tag)
+					signalFor(removedSignals, tag):Fire(tagged)
+				end)
+			end
+		end,
+		tagAdded = function(instance, tag)
+			if self.Running and inGame(instance.Parent) then
+				signalFor(addedSignals, tag):Fire(instance)
+			end
+		end,
+		tagRemoved = function(instance, tag)
+			if self.Running and inGame(instance.Parent) then
+				signalFor(removedSignals, tag):Fire(instance)
+			end
+		end,
+	}
+	table.insert(Mock.parentListeners, self.collectionListener)
+
+	-- TweenService simulado: aplica o valor final na hora.
+	local tweenService = service("TweenService")
+	tweenService.Create = function(_, instance, _info, goals)
+		local tween = { Completed = Mock.newSignal() }
+		function tween:Play()
+			for key, value in goals do
+				instance[key] = value
+			end
+			tween.Completed:Fire(Mock.Enum.PlaybackState.Completed)
+		end
+		function tween:Cancel() end
+		function tween:Pause() end
+		return tween
+	end
+
+	local promptService = service("ProximityPromptService")
+	for _, signalName in
+		{ "PromptShown", "PromptHidden", "PromptTriggered", "PromptButtonHoldBegan", "PromptButtonHoldEnded" }
+	do
+		promptService[signalName] = Mock.newSignal()
+	end
+	self.ProximityPromptService = promptService
 
 	local players = service("Players")
 	players.PlayerAdded = Mock.newSignal()

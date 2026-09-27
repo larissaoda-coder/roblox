@@ -110,10 +110,32 @@ Vector3Meta.__index = function(self, key)
 end
 Mock.Vector3 = { new = newVector3, zero = newVector3(0, 0, 0) }
 
+-- CFrame simplificado: guarda posição e ângulo Y acumulado (suficiente para os testes).
+local CFrameMeta = {}
+local function newCFrame(position, yaw)
+	return setmetatable({ __mockType = "CFrame", Position = position, Yaw = yaw or 0 }, CFrameMeta)
+end
+CFrameMeta.__mul = function(a, b)
+	if rawget(b, "__mockType") == "CFrame" then
+		return newCFrame(a.Position + b.Position, a.Yaw + b.Yaw)
+	end
+	return a.Position + b
+end
+CFrameMeta.__add = function(a, b)
+	return newCFrame(a.Position + b, a.Yaw)
+end
 Mock.CFrame = {
 	new = function(x, y, z)
-		local position = if type(x) == "table" then x else newVector3(x, y, z)
-		return datatype("CFrame", { Position = position })
+		local position = if type(x) == "table" then x else newVector3(x or 0, y or 0, z or 0)
+		return newCFrame(position, 0)
+	end,
+	Angles = function(_, yaw, _)
+		return newCFrame(newVector3(0, 0, 0), yaw or 0)
+	end,
+}
+Mock.TweenInfo = {
+	new = function(...)
+		return datatype("TweenInfo", { Args = table.pack(...) })
 	end,
 }
 Mock.UDim = {
@@ -171,12 +193,26 @@ local SUPERCLASSES = {
 
 -- Eventos específicos de algumas classes.
 local CLASS_SIGNALS = {
-	TextButton = { "Activated", "MouseButton1Click" },
-	ImageButton = { "Activated", "MouseButton1Click" },
+	TextButton = { "Activated", "MouseButton1Click", "MouseButton1Down", "MouseButton1Up" },
+	ImageButton = { "Activated", "MouseButton1Click", "MouseButton1Down", "MouseButton1Up" },
+	ProximityPrompt = {
+		"Triggered",
+		"PromptButtonHoldBegan",
+		"PromptButtonHoldEnded",
+		"PromptShown",
+		"PromptHidden",
+	},
 	TextBox = { "FocusLost", "Focused" },
 }
 
 local DEFAULTS = {
+	ProximityPrompt = {
+		Enabled = true,
+		HoldDuration = 0,
+		MaxActivationDistance = 10,
+		RequiresLineOfSight = true,
+	},
+	Part = { Size = nil, Anchored = false, CanCollide = true, Transparency = 0 },
 	ScreenGui = { Enabled = true, ResetOnSpawn = true, DisplayOrder = 0, IgnoreGuiInset = false },
 	TextLabel = { Text = "Label", Visible = true },
 	Frame = { Visible = true },
@@ -191,6 +227,10 @@ local NILLABLE = {
 	SelectedObject = true,
 	Character = true,
 }
+
+-- Ouvintes globais (usados pelo CollectionService simulado de cada mundo).
+Mock.parentListeners = {}
+Mock.tagListeners = {}
 
 function Mock.isInstance(value)
 	return instanceSet[value] == true
@@ -212,6 +252,7 @@ function Mock.newInstance(className, name)
 	local childRemoved = Mock.newSignal()
 	local ancestryChanged = Mock.newSignal()
 	local destroying = Mock.newSignal()
+	local tags = {}
 	local attributeChanged = Mock.newSignal()
 	local attributeSignals = {}
 	local propertySignals = {}
@@ -328,6 +369,81 @@ function Mock.newInstance(className, name)
 		return table.clone(attributes)
 	end
 
+	function methods:AddTag(tag)
+		if not tags[tag] then
+			tags[tag] = true
+			for _, listener in Mock.parentListeners do
+				listener.tagAdded(self, tag)
+			end
+		end
+	end
+
+	function methods:RemoveTag(tag)
+		if tags[tag] then
+			tags[tag] = nil
+			for _, listener in Mock.parentListeners do
+				listener.tagRemoved(self, tag)
+			end
+		end
+	end
+
+	function methods:HasTag(tag)
+		return tags[tag] == true
+	end
+
+	function methods:GetTags()
+		local list = {}
+		for tag in tags do
+			table.insert(list, tag)
+		end
+		return list
+	end
+
+	function methods:FindFirstChildWhichIsA(targetClass, recursive)
+		for _, child in children do
+			if child:IsA(targetClass) then
+				return child
+			end
+			if recursive then
+				local found = child:FindFirstChildWhichIsA(targetClass, true)
+				if found then
+					return found
+				end
+			end
+		end
+		return nil
+	end
+
+	function methods:FindFirstAncestorWhichIsA(targetClass)
+		local current = parent
+		while current do
+			if current:IsA(targetClass) then
+				return current
+			end
+			current = current.Parent
+		end
+		return nil
+	end
+
+	function methods:FindFirstAncestor(ancestorName)
+		local current = parent
+		while current do
+			if current.Name == ancestorName then
+				return current
+			end
+			current = current.Parent
+		end
+		return nil
+	end
+
+	function methods:InputHoldBegin()
+		props.__holding = true
+	end
+
+	function methods:InputHoldEnd()
+		props.__holding = false
+	end
+
 	function methods:Clone()
 		local copy = Mock.newInstance(className, props.Name)
 		for key, value in props do
@@ -337,6 +453,9 @@ function Mock.newInstance(className, name)
 		end
 		for key, value in attributes do
 			copy:SetAttribute(key, value)
+		end
+		for tag in tags do
+			copy:AddTag(tag)
 		end
 		for _, child in children do
 			child:Clone().Parent = copy
@@ -381,6 +500,7 @@ function Mock.newInstance(className, name)
 		if newParent ~= nil and not instanceSet[newParent] then
 			error("Parent precisa ser uma Instance")
 		end
+		local oldParent = parent
 		if parent then
 			parent.__removeChild(self)
 		end
@@ -389,6 +509,9 @@ function Mock.newInstance(className, name)
 			newParent.__addChild(self)
 		end
 		ancestryChanged:Fire(self, newParent)
+		for _, listener in Mock.parentListeners do
+			listener.parentChanged(self, oldParent, newParent)
+		end
 	end
 
 	local internals = {

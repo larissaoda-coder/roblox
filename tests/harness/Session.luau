@@ -40,6 +40,14 @@ local function copyArgs(...)
 	return table.unpack(args, 1, args.n)
 end
 
+local function detach(world)
+	world.Running = false
+	local index = table.find(Mock.parentListeners, world.collectionListener)
+	if index then
+		table.remove(Mock.parentListeners, index)
+	end
+end
+
 function Session.new(options)
 	options = options or {}
 	local self = setmetatable({}, Session)
@@ -279,7 +287,7 @@ function Session:removeClient(client)
 		return
 	end
 	table.remove(self.Clients, index)
-	client.Running = false
+	detach(client)
 	self.Server.Players.PlayerRemoving:Fire(client.ServerPlayer)
 	task.wait()
 	client.ServerPlayer.Parent = nil
@@ -298,9 +306,9 @@ function Session:shutdown()
 end
 
 function Session:stop()
-	self.Server.Running = false
+	detach(self.Server)
 	for _, client in self.Clients do
-		client.Running = false
+		detach(client)
 	end
 end
 

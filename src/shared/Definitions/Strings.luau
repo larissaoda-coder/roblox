@@ -92,6 +92,12 @@ local LANGUAGES: { [string]: StringTable } = {
 		HUD_OBJECTIVE_BRIEFING = "Keep the station running until 5 AM.",
 		HUD_OBJECTIVE_DEFAULT = "KEEP THE STATION RUNNING",
 		HUD_SHIFT_COMPLETE = "SHIFT COMPLETE",
+
+		INTERACT_BUTTON = "INTERACT",
+		PROMPT_INTERACT = "Interact",
+		PROMPT_OPEN_DOOR = "Open door",
+		PROMPT_CLOSE_DOOR = "Close door",
+		NOTIFY_DOOR_LOCKED = "It's locked.",
 	},
 	pt = {
 		GAME_TITLE = "NIGHT SHIFT: 4AM",
@@ -180,6 +186,12 @@ local LANGUAGES: { [string]: StringTable } = {
 		HUD_OBJECTIVE_BRIEFING = "Mantenha o posto funcionando até as 5h.",
 		HUD_OBJECTIVE_DEFAULT = "MANTENHA O POSTO FUNCIONANDO",
 		HUD_SHIFT_COMPLETE = "TURNO CONCLUÍDO",
+
+		INTERACT_BUTTON = "INTERAGIR",
+		PROMPT_INTERACT = "Interagir",
+		PROMPT_OPEN_DOOR = "Abrir porta",
+		PROMPT_CLOSE_DOOR = "Fechar porta",
+		NOTIFY_DOOR_LOCKED = "Está trancada.",
 	},
 }
 

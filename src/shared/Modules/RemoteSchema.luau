@@ -76,6 +76,13 @@ local RemoteSchema: { [string]: RemoteSpec } = {
 		Args = {},
 	},
 
+	-- Notificações -----------------------------------------------------------
+	-- (textKey: string, ...args) mensagem curta na tela do jogador.
+	Notify = {
+		Kind = "Event",
+		Direction = "ServerToClient",
+	},
+
 	-- Admin / Debug -------------------------------------------------------
 	RequestDebugAccess = {
 		Kind = "Function",
