@@ -167,6 +167,8 @@ function Session:addClient(name, userId, clientOptions)
 		verbose = self.Options.verbose,
 		studio = self.Options.studio,
 		locale = clientOptions.locale,
+		viewportWidth = clientOptions.viewportWidth,
+		viewportHeight = clientOptions.viewportHeight,
 	})
 	client.ServerPlayer = serverPlayer
 	client.Proxies = {}

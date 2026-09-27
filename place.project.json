@@ -3,38 +3,44 @@
   "tree": {
     "$className": "DataModel",
     "ReplicatedStorage": {
-      "Shared": { "$path": "src/shared" }
+      "Shared": {
+        "$path": "src/shared"
+      }
     },
     "ServerScriptService": {
-      "Server": { "$path": "src/server" }
+      "Server": {
+        "$path": "src/server"
+      }
     },
     "StarterPlayer": {
       "StarterPlayerScripts": {
-        "Client": { "$path": "src/client" }
+        "Client": {
+          "$path": "src/client"
+        }
       }
     },
     "Workspace": {
-      "$properties": { "FilteringEnabled": true },
-      "Baseplate": {
-        "$className": "Part",
-        "$properties": {
-          "Anchored": true,
-          "Locked": true,
-          "Size": [512, 16, 512],
-          "Position": [0, -8, 0],
-          "Color": [0.25, 0.25, 0.27],
-          "Material": "Concrete"
-        }
-      },
-      "SpawnLocation": {
-        "$className": "SpawnLocation",
-        "$properties": {
-          "Anchored": true,
-          "Size": [12, 1, 12],
-          "Position": [0, 0.5, 0],
-          "Transparency": 0.5,
-          "Neutral": true
-        }
+      "$properties": {
+        "FilteringEnabled": true
+      }
+    },
+    "Lighting": {
+      "$properties": {
+        "ClockTime": 0,
+        "Brightness": 1,
+        "Ambient": [
+          0.06,
+          0.06,
+          0.08
+        ],
+        "OutdoorAmbient": [
+          0.08,
+          0.08,
+          0.1
+        ],
+        "EnvironmentDiffuseScale": 0.2,
+        "EnvironmentSpecularScale": 0.2,
+        "GlobalShadows": true
       }
     }
   }

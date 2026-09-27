@@ -133,7 +133,19 @@ local SUPERCLASSES = {
 	ScreenGui = { "LayerCollector", "GuiBase2d" },
 	TextLabel = { "GuiObject", "GuiBase2d" },
 	TextButton = { "GuiButton", "GuiObject", "GuiBase2d" },
+	ImageButton = { "GuiButton", "GuiObject", "GuiBase2d" },
+	ImageLabel = { "GuiObject", "GuiBase2d" },
+	TextBox = { "GuiObject", "GuiBase2d" },
 	Frame = { "GuiObject", "GuiBase2d" },
+	ScrollingFrame = { "GuiObject", "GuiBase2d" },
+	Model = { "PVInstance" },
+}
+
+-- Eventos específicos de algumas classes.
+local CLASS_SIGNALS = {
+	TextButton = { "Activated", "MouseButton1Click" },
+	ImageButton = { "Activated", "MouseButton1Click" },
+	TextBox = { "FocusLost", "Focused" },
 }
 
 local DEFAULTS = {
@@ -143,7 +155,13 @@ local DEFAULTS = {
 }
 
 -- Propriedades que podem ser nil sem gerar erro.
-local NILLABLE = { OnServerInvoke = true, OnClientInvoke = true, PrimaryPart = true, Adornee = true }
+local NILLABLE = {
+	OnServerInvoke = true,
+	OnClientInvoke = true,
+	PrimaryPart = true,
+	Adornee = true,
+	SelectedObject = true,
+}
 
 function Mock.isInstance(value)
 	return instanceSet[value] == true
@@ -167,6 +185,7 @@ function Mock.newInstance(className, name)
 	local destroying = Mock.newSignal()
 	local attributeChanged = Mock.newSignal()
 	local attributeSignals = {}
+	local propertySignals = {}
 
 	local methods = {}
 
@@ -262,6 +281,11 @@ function Mock.newInstance(className, name)
 		end
 	end
 
+	function methods:GetPropertyChangedSignal(property)
+		propertySignals[property] = propertySignals[property] or Mock.newSignal()
+		return propertySignals[property]
+	end
+
 	function methods:GetAttributeChangedSignal(key)
 		attributeSignals[key] = attributeSignals[key] or Mock.newSignal()
 		return attributeSignals[key]
@@ -328,6 +352,9 @@ function Mock.newInstance(className, name)
 		Destroying = destroying,
 		AttributeChanged = attributeChanged,
 	}
+	for _, signalName in CLASS_SIGNALS[className] or {} do
+		internals[signalName] = Mock.newSignal()
+	end
 
 	setmetatable(self, {
 		__index = function(_, key)
@@ -351,7 +378,11 @@ function Mock.newInstance(className, name)
 			if key == "Parent" then
 				setParent(value)
 			else
+				local changed = props[key] ~= value
 				props[key] = value
+				if changed and propertySignals[key] then
+					propertySignals[key]:Fire()
+				end
 			end
 		end,
 		__tostring = function()

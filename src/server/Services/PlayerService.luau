@@ -13,6 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
 local Strings = require(Shared.Definitions.Strings)
 local Log = require(Shared.Modules.Log)
+local Net = require(Shared.Modules.Net)
 local Signal = require(Shared.Modules.Signal)
 
 local DataService = require(script.Parent.DataService)
@@ -102,7 +103,23 @@ local function onPlayerRemoving(player: Player)
 	DataService:ReleaseProfile(player)
 end
 
-function PlayerService:Init() end
+-- Resumo do perfil para a tela de PERFIL (somente leitura).
+local function getPublicProfile(player: Player): { [string]: any }?
+	if not DataService:IsLoaded(player) then
+		return nil
+	end
+	return {
+		Level = DataService:Get(player, "Level"),
+		XP = DataService:Get(player, "XP"),
+		Cash = DataService:Get(player, "Cash"),
+		NightTokens = DataService:Get(player, "NightTokens"),
+		Stats = DataService:Get(player, "Stats"),
+	}
+end
+
+function PlayerService:Init()
+	Net.Server.handle("GetMyProfile", getPublicProfile)
+end
 
 function PlayerService:Start()
 	Players.PlayerAdded:Connect(onPlayerAdded)

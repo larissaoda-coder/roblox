@@ -248,6 +248,13 @@ function World.new(kind, name, options)
 	service("ServerScriptService")
 	service("ServerStorage")
 	service("Lighting")
+	local guiService = service("GuiService")
+	guiService.SelectedObject = nil
+	local camera = Mock.newInstance("Camera", "Camera")
+	camera.ViewportSize = Mock.Vector2.new(options.viewportWidth or 1280, options.viewportHeight or 720)
+	camera.Parent = self.workspace
+	self.workspace.CurrentCamera = camera
+	self.Camera = camera
 	service("SoundService")
 	local starterPlayer = service("StarterPlayer")
 	Mock.newInstance("StarterPlayerScripts").Parent = starterPlayer

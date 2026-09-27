@@ -5,7 +5,7 @@
 
 Status: **APROVADA**. Decisões confirmadas: A = modo Local primeiro · B = Rojo · C = DataService próprio · D = EN + PT-BR.
 
-Fases concluídas: **Fase 1 — Arquitetura base** · **Fase 2 — Sistema de jogadores**.
+Fases concluídas: **Fase 1 — Arquitetura base** · **Fase 2 — Sistema de jogadores** · **Fase 3 — Lobby**.
 
 ---
 
@@ -118,6 +118,8 @@ ServerScriptService
     │   └── DataConfig [M]           -- template dos dados salvos, backend, autosave
     ├── Data [F]                     -- backends de armazenamento usados pelo DataService
     │   └── MemoryBackend [M]        -- Fase 2 (DataStoreBackend na Fase 13)
+    ├── World [F]                    -- geradores de cenário
+    │   └── LobbyBuilder [M]         -- gera Workspace.Lobby se você não tiver criado um
     └── Services [F]                 -- todos são ModuleScripts com :Init() e :Start()
         ├── DataService [M]
         ├── PlayerService [M]
@@ -168,9 +170,9 @@ StarterPlayer
         │   ├── SettingsController [M]
         │   └── DebugController [M]
         └── UI [F]
-            ├── Theme [M]                -- cores, fontes, tamanhos
-            ├── Components [F]           -- Button, Panel, ProgressBar, Toast…
-            └── Screens [F]              -- HUD, Lobby, Shop, Inventory, Results, Settings…
+            ├── Theme [M]                -- cores, fontes, tamanhos, escala
+            ├── Components [M]           -- button, label, panel, row, list… (tamanho de toque automático)
+            └── Screens [F]              -- LobbyScreen (Fase 3); HUD, Shop, Results… nas próximas fases
 
 StarterGui                           -- vazio ou quase: a UI é criada por código (ver nota)
 
@@ -259,7 +261,7 @@ Mantemos suas 21 fases, com **um ajuste**:
 |---|---|---|
 | 1 Arquitetura base ✅ | Pastas, ServerMain, ClientMain, Loader, Net, RemoteSchema, RateLimiter, InstanceUtil, Log, Signal, Trove, GameConfig, Strings, Theme, AdminConfig, AdminService (autorização), DebugController | — |
 | 2 Jogadores ✅ | PlayerService, DataService (memória), DataConfig, MemoryBackend, TableUtil, InputController | 1 |
-| 3 Lobby | LobbyService, LobbyController, UI do lobby | 1, 2 |
+| 3 Lobby ✅ | LobbyService, LobbyBuilder, MapDefinitions, LobbyController, LobbyScreen, Components | 1, 2 |
 | 4 Partida | MatchService, MapService, ClockService, HUD básico | 3 |
 | 5 Interação | InteractionService, InteractionController (PC/celular/controle) | 1, 4 |
 | 6 Tarefas | TaskService, TaskDefinitions, objetivo no HUD | 5 |
@@ -386,6 +388,11 @@ Fluxo de construção do MVP: Fases 1 → 9, 11, 12, 13 (a Fase 10 – NPCs – 
 - **Ciclo de vida**: serviços usam `PlayerService.PlayerReady` / `PlayerService.PlayerLeaving`, nunca `Players.PlayerAdded` direto.
   Atributos do Player: `Ready` (boolean) e `State` (`Loading` | `Lobby` | `InShift` | `Spectating`).
 - **Entrada**: controllers usam `InputController:BindAction(nome, { Keyboard, Gamepad }, fn)` e `InputController.InputTypeChanged`.
+
+- **Lobby → Partida**: o `LobbyService` não inicia partidas. O `MatchService` (Fase 4) registra
+  `LobbyService:SetLaunchHandler(function(request) ... return true / false, "CódigoDeErro" end)`,
+  recebendo `{ PartyId, MapId, Players }`, e chama `LobbyService:DisbandParty(PartyId)` quando os jogadores entram no mapa.
+- **UI**: telas só desenham e repassam ações por callbacks; controllers falam com o servidor. Textos via `Strings`, erros como `LOBBY_ERR_<Código>`.
 
 ## 12. Testes automatizados
 
