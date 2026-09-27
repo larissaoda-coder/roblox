@@ -128,6 +128,9 @@ function World:makeEnv(scriptInstance)
 		TweenInfo = Mock.TweenInfo,
 		Random = Mock.Random,
 		Font = Mock.Font,
+		NumberRange = Mock.NumberRange,
+		NumberSequence = Mock.NumberSequence,
+		ColorSequence = Mock.ColorSequence,
 		UDim = Mock.UDim,
 		UDim2 = Mock.UDim2,
 		Color3 = Mock.Color3,
@@ -252,11 +255,17 @@ function World.new(kind, name, options)
 	service("ReplicatedStorage")
 	service("ServerScriptService")
 	service("ServerStorage")
-	service("Lighting")
+	local lighting = service("Lighting")
+	lighting.Brightness = 1
+	lighting.ClockTime = 0
+	lighting.FogEnd = 1000
 	local guiService = service("GuiService")
 	guiService.SelectedObject = nil
 	local camera = Mock.newInstance("Camera", "Camera")
 	camera.ViewportSize = Mock.Vector2.new(options.viewportWidth or 1280, options.viewportHeight or 720)
+	camera.CFrame = Mock.CFrame.new(0, 5, 0)
+	camera.CameraType = Mock.Enum.CameraType.Custom
+	camera.FieldOfView = 70
 	camera.Parent = self.workspace
 	self.workspace.CurrentCamera = camera
 	self.Camera = camera

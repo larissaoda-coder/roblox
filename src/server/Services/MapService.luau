@@ -31,6 +31,28 @@ local MapService = {}
 
 local activeMap: Model? = nil
 
+type ZoneBox = { Name: string, Part: BasePart, Min: Vector3, Max: Vector3 }
+local zoneBoxes: { ZoneBox } = {}
+
+local function cacheZones(map: Model)
+	table.clear(zoneBoxes)
+	local zones = map:FindFirstChild("Zones")
+	if not zones then
+		return
+	end
+	for _, zonePart in zones:GetChildren() do
+		if zonePart:IsA("BasePart") then
+			local half = zonePart.Size / 2
+			table.insert(zoneBoxes, {
+				Name = tostring(zonePart:GetAttribute("Zone") or zonePart.Name),
+				Part = zonePart,
+				Min = zonePart.Position - half,
+				Max = zonePart.Position + half,
+			})
+		end
+	end
+end
+
 local function getSource(mapId: string): Model
 	local maps = ServerStorage:FindFirstChild("Maps")
 	local source = maps and maps:FindFirstChild(mapId)
@@ -63,16 +85,58 @@ function MapService:Load(mapId: string): Model
 	end
 	map.Parent = workspace:FindFirstChild("Runtime") or workspace
 	activeMap = map
+	cacheZones(map)
 	log:Info("Mapa %s carregado", mapId)
 	return map
 end
 
 function MapService:Unload()
+	table.clear(zoneBoxes)
 	if activeMap then
 		activeMap:Destroy()
 		activeMap = nil
 		log:Debug("Mapa descarregado")
 	end
+end
+
+-- Zona em que uma posição está (Store, Back, Pumps…). Fora de qualquer zona = "Forest".
+-- Zonas são caixas alinhadas aos eixos (Parts sem rotação), então o teste é barato.
+function MapService:GetZoneAt(position: Vector3): (string, BasePart?)
+	for _, box in zoneBoxes do
+		if
+			position.X >= box.Min.X
+			and position.X <= box.Max.X
+			and position.Y >= box.Min.Y
+			and position.Y <= box.Max.Y
+			and position.Z >= box.Min.Z
+			and position.Z <= box.Max.Z
+		then
+			return box.Name, box.Part
+		end
+	end
+	return "Forest", nil
+end
+
+function MapService:GetZonePart(zoneName: string): BasePart?
+	for _, box in zoneBoxes do
+		if box.Name == zoneName then
+			return box.Part
+		end
+	end
+	return nil
+end
+
+-- Busca uma pasta padrão do mapa ativo (ex.: "EventAnchors", "SecurityCameras").
+function MapService:GetFolder(folderName: string): Instance?
+	local map = activeMap
+	return if map then map:FindFirstChild(folderName) else nil
+end
+
+-- Posição do personagem do jogador (ou nil).
+function MapService:GetCharacterPosition(player: Player): Vector3?
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	return if root and root:IsA("BasePart") then root.Position else nil
 end
 
 -- Pontos de spawn do mapa ativo (em ordem de nome, para ser previsível).

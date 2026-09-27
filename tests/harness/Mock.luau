@@ -132,6 +132,15 @@ Vector3Meta.__mul = function(a, b)
 	end
 	return newVector3(a.X * b.X, a.Y * b.Y, a.Z * b.Z)
 end
+Vector3Meta.__div = function(a, b)
+	if type(b) == "number" then
+		return newVector3(a.X / b, a.Y / b, a.Z / b)
+	end
+	return newVector3(a.X / b.X, a.Y / b.Y, a.Z / b.Z)
+end
+Vector3Meta.__unm = function(a)
+	return newVector3(-a.X, -a.Y, -a.Z)
+end
 Vector3Meta.__eq = function(a, b)
 	return a.X == b.X and a.Y == b.Y and a.Z == b.Z
 end
@@ -175,6 +184,21 @@ Mock.Font = {
 	end,
 	new = function(family, weight)
 		return datatype("Font", { Family = family, Weight = weight })
+	end,
+}
+Mock.NumberRange = {
+	new = function(min, max)
+		return datatype("NumberRange", { Min = min, Max = max or min })
+	end,
+}
+Mock.NumberSequence = {
+	new = function(...)
+		return datatype("NumberSequence", { Args = table.pack(...) })
+	end,
+}
+Mock.ColorSequence = {
+	new = function(...)
+		return datatype("ColorSequence", { Args = table.pack(...) })
 	end,
 }
 Mock.TweenInfo = {

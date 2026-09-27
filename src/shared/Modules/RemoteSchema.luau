@@ -34,6 +34,19 @@ local RemoteSchema: { [string]: RemoteSpec } = {
 		Args = {},
 	},
 
+	GetSettings = {
+		Kind = "Function",
+		Direction = "ClientToServer",
+		RateLimit = { Max = 3, Per = 5 },
+		Args = {},
+	},
+	UpdateSetting = {
+		Kind = "Function",
+		Direction = "ClientToServer",
+		RateLimit = { Max = 10, Per = 2 },
+		Args = { T.string(32), T.oneOfTypes({ "number", "boolean" }) },
+	},
+
 	-- Lobby -----------------------------------------------------------------
 	RequestLobbyState = {
 		Kind = "Function",
@@ -90,6 +103,18 @@ local RemoteSchema: { [string]: RemoteSpec } = {
 	},
 	-- (taskId, isNew) tarefa concluída (isNew = false) ou nova tarefa liberada (isNew = true).
 	TaskNotice = {
+		Kind = "Event",
+		Direction = "ServerToClient",
+	},
+
+	-- Áudio -----------------------------------------------------------------
+	-- (soundName, position | nil, options) toca um som (posicional ou 2D) no cliente.
+	PlaySound = {
+		Kind = "Event",
+		Direction = "ServerToClient",
+	},
+	-- (soundName) para um som em loop.
+	StopSound = {
 		Kind = "Event",
 		Direction = "ServerToClient",
 	},

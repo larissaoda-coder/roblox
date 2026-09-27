@@ -80,6 +80,21 @@ function T.oneOf(options: { any }): Validator
 	end
 end
 
+-- Aceita qualquer um dos tipos primitivos listados (números ainda rejeitam NaN/infinito).
+function T.oneOfTypes(types: { string }): Validator
+	local checkNumber = T.number()
+	return function(value)
+		local valueType = type(value)
+		if not table.find(types, valueType) then
+			return false, "tipo não permitido"
+		end
+		if valueType == "number" then
+			return checkNumber(value)
+		end
+		return true
+	end
+end
+
 function T.optional(validator: Validator): Validator
 	return function(value)
 		if value == nil then
