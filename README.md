@@ -1,5 +1,7 @@
 # NIGHT SHIFT: 4AM
 
+> Este repositório também contém o **sistema web Art Películas** (simulação de películas, orçamentos e gestão) em [`art-peliculas/`](art-peliculas/README.md).
+
 Horror cooperativo para Roblox.
 
 - **Guia do dono do jogo (comece aqui):** [`docs/GUIA.md`](docs/GUIA.md)

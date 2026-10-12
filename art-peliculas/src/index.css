@@ -1,0 +1,83 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    @apply bg-white font-sans text-neutral-900;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+  ::selection {
+    @apply bg-neutral-900 text-white;
+  }
+  /* Itens de grid não devem crescer além da coluna por causa de textos longos (truncate). */
+  .grid > * {
+    min-width: 0;
+  }
+  :focus-visible {
+    @apply outline-none ring-2 ring-neutral-900 ring-offset-2 ring-offset-white;
+  }
+  input[type='number']::-webkit-inner-spin-button,
+  input[type='number']::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type='number'] {
+    -moz-appearance: textfield;
+  }
+}
+
+@layer components {
+  .field-control {
+    @apply block w-full rounded-md border border-neutral-300 bg-white px-3 text-sm text-neutral-900 shadow-soft transition-colors duration-150 placeholder:text-neutral-400 hover:border-neutral-400 focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900 disabled:cursor-not-allowed disabled:bg-neutral-50 disabled:text-neutral-500;
+  }
+  .field-control:focus-visible {
+    --tw-ring-offset-width: 0px;
+    --tw-ring-offset-shadow: 0 0 #0000;
+    --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(1px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+  }
+  .field-control[aria-invalid='true'] {
+    @apply border-neutral-900 ring-1 ring-neutral-900;
+  }
+  .eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500;
+  }
+  .num {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: theme('colors.neutral.300') transparent;
+  }
+  .checker {
+    background-color: #f5f5f5;
+    background-image:
+      linear-gradient(45deg, #ececec 25%, transparent 25%),
+      linear-gradient(-45deg, #ececec 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #ececec 75%),
+      linear-gradient(-45deg, transparent 75%, #ececec 75%);
+    background-size: 16px 16px;
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+  }
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+  body {
+    @apply bg-white;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
